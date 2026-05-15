@@ -117,10 +117,14 @@ public static class SceneBuilderGame
         audio.playOnAwake = false;
         session.sfxSource = audio;
 
+        var easyDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
+            AssetForge.DifficultyEasyPath);
         var normalDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
             AssetForge.DifficultyNormalPath);
+        var hardDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
+            AssetForge.DifficultyHardPath);
         session.difficulty = normalDiff;
-        session.availableDifficulties = new[] { normalDiff };
+        session.availableDifficulties = new[] { easyDiff, normalDiff, hardDiff };
 
         EditorUtility.SetDirty(session);
         return session;

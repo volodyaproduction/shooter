@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0c0ffadb1e07f40aea10e71d3bde6e36, type: 3}
-  m_Name: Difficulty_Normal
+  m_Name: Difficulty_Hard
   m_EditorClassIdentifier: Assembly-CSharp::DifficultyConfig
-  id: normal
-  displayName: "\u041D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E"
+  id: hard
+  displayName: "\u0421\u043B\u043E\u0436\u043D\u043E"
   roundDuration: 30
-  spawnIntervalMin: 0.55
-  spawnIntervalMax: 1.1
-  targetLifetime: 1.8
-  trapChance: 0.15
-  spawnAreaPadding: {x: 1.2, y: 1.2}
-  fastReactionBonus: 2
-  fastReactionWindow: 0.8
+  spawnIntervalMin: 0.35
+  spawnIntervalMax: 0.7
+  targetLifetime: 1.2
+  trapChance: 0.25
+  spawnAreaPadding: {x: 1, y: 1}
+  fastReactionBonus: 2.5
+  fastReactionWindow: 0.55

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -14,18 +15,19 @@ public class Target : MonoBehaviour, IPointerClickHandler
     SpriteRenderer sr;
     float spawnTime;
     bool clicked;
+    float fullScale;
 
     public void Init(TargetTypeConfig cfg, float lifetime)
     {
         // 1. Запоминаем конфиг и применяем визуал
         config = cfg;
         sr = GetComponent<SpriteRenderer>();
+        fullScale = 1f;
         if (cfg != null)
         {
             if (cfg.sprite != null) sr.sprite = cfg.sprite;
             sr.color = cfg.tint;
-            if (Mathf.Abs(cfg.scale - 1f) > 0.001f)
-                transform.localScale = Vector3.one * cfg.scale;
+            fullScale = cfg.scale > 0 ? cfg.scale : 1f;
         }
 
         // 2. Стартовое время для бонуса за скорость
@@ -33,6 +35,30 @@ public class Target : MonoBehaviour, IPointerClickHandler
 
         // 3. Авто-уничтожение, если по мишени не успели кликнуть
         Destroy(gameObject, lifetime);
+
+        // 4. Pop-эффект появления (корутиной, без внешних tween-библиотек)
+        StartCoroutine(PopIn());
+    }
+
+    IEnumerator PopIn()
+    {
+        const float dur = 0.14f;
+        var from = Vector3.one * 0.15f;
+        var to = Vector3.one * fullScale;
+        transform.localScale = from;
+        var t = 0f;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            var k = Mathf.Clamp01(t / dur);
+            // EaseOutBack — лёгкий «перелёт» на 12% и возврат
+            var s = 1.12f;
+            var eased = 1f + (s + 1f) * Mathf.Pow(k - 1f, 3f)
+                          + s * Mathf.Pow(k - 1f, 2f);
+            transform.localScale = Vector3.LerpUnclamped(from, to, eased);
+            yield return null;
+        }
+        transform.localScale = to;
     }
 
     public void OnPointerClick(PointerEventData eventData)
@@ -59,9 +85,13 @@ public class Target : MonoBehaviour, IPointerClickHandler
         // 5. Эффекты: партикл + звук
         SpawnEffectsAndSfx();
 
-        // 6. Передаём очки в сессию
-        if (GameSession.Instance != null)
-            GameSession.Instance.AddScore(points, transform.position);
+        // 6. Тряска камеры (сильнее для ловушек) + очки в сессию
+        var session = GameSession.Instance;
+        if (session != null)
+        {
+            session.Shake(amplitude: config != null && config.isTrap ? 0.28f : 0.12f);
+            session.AddScore(points, transform.position);
+        }
 
         Destroy(gameObject);
     }

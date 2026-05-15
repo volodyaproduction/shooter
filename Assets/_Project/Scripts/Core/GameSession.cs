@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using URandom = UnityEngine.Random;
 
 // Центральная игровая сессия раунда: состояние, счёт, таймер, события.
 // Не использует DontDestroyOnLoad — пересоздаётся вместе со сценой Game.
@@ -94,6 +95,30 @@ public class GameSession : MonoBehaviour
         var window = Mathf.Max(0.05f, difficulty.fastReactionWindow);
         var t = Mathf.Clamp01(reactionTime / window);
         return Mathf.Lerp(difficulty.fastReactionBonus, 1f, t);
+    }
+
+    public void Shake(float amplitude = 0.12f, float duration = 0.18f)
+    {
+        // 8. Тряска главной камеры через локальные смещения. Запускается
+        //    корутиной, чтобы оставаться независимой от DOTween.
+        var cam = Camera.main;
+        if (cam == null) return;
+        StartCoroutine(ShakeCoroutine(cam.transform, amplitude, duration));
+    }
+
+    IEnumerator ShakeCoroutine(Transform tr, float amplitude, float duration)
+    {
+        var origin = tr.localPosition;
+        var t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            var k = 1f - Mathf.Clamp01(t / duration);
+            var offset2d = URandom.insideUnitCircle * (amplitude * k);
+            tr.localPosition = origin + new Vector3(offset2d.x, offset2d.y, 0f);
+            yield return null;
+        }
+        tr.localPosition = origin;
     }
 
     IEnumerator TimerLoop()

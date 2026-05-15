@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf5ac010b86384d3a84280c97a4c27e6, type: 3}
+  m_Name: NormalTarget
+  m_EditorClassIdentifier: Assembly-CSharp::TargetTypeConfig
+  id: normal
+  displayName: "\u041E\u0431\u044B\u0447\u043D\u0430\u044F"
+  sprite: {fileID: 21300000, guid: f203d6adf41e54e0b95d8232c1983c61, type: 3}
+  tint: {r: 1, g: 1, b: 1, a: 1}
+  scale: 1
+  basePoints: 10
+  isTrap: 0
+  hitEffectPrefab: {fileID: 6937682433902166045, guid: e0c8a398e384946fb805c7fab9194679, type: 3}
+  hitClip: {fileID: 0}

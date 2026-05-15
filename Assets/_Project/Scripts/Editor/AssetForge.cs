@@ -9,9 +9,15 @@ public static class AssetForge
 {
     // 1. Пути к ассетам
     public const string GeneratedArtDir = "Assets/_Project/Art/Generated";
+    public const string GeneratedAudioDir = "Assets/_Project/Audio/Generated";
     public const string ConfigsDir = "Assets/_Project/Configs";
     public const string PrefabsDir = "Assets/_Project/Prefabs";
     public const string VfxDir = "Assets/_Project/VFX";
+
+    public const string HitClipPath = GeneratedAudioDir + "/hit.wav";
+    public const string MissClipPath = GeneratedAudioDir + "/miss.wav";
+    public const string TrapClipPath = GeneratedAudioDir + "/trap.wav";
+    public const string WinClipPath = GeneratedAudioDir + "/win.wav";
 
     public const string NormalTargetSpritePath =
         GeneratedArtDir + "/target_normal.png";
@@ -40,9 +46,13 @@ public static class AssetForge
     public static void BuildAll()
     {
         EnsureDir(GeneratedArtDir);
+        EnsureDir(GeneratedAudioDir);
         EnsureDir(ConfigsDir);
         EnsureDir(PrefabsDir);
         EnsureDir(VfxDir);
+
+        // 1a. Звуки-плейсхолдеры (PCM, генерируются программно)
+        ForgeAudioClips();
 
         // 2. PNG-плейсхолдеры (генерируются всегда — перерисовать при изменении)
         WritePng(
@@ -87,10 +97,12 @@ public static class AssetForge
         var hitFx = ForgeHitEffectPrefab();
         var missFx = ForgeMissEffectPrefab();
 
-        // 5. Связки конфигов с эффектами/звуком (звуков пока нет — null)
+        // 5. Связки конфигов с эффектами/звуком
         normalConfig.hitEffectPrefab = hitFx;
-        // У ловушки тоже зелёный «hit», красный эффект достанется промахам
+        normalConfig.hitClip = LoadClip(HitClipPath);
+        // У ловушки красный «hit-эффект», свой буззз-клип
         trapConfig.hitEffectPrefab = missFx;
+        trapConfig.hitClip = LoadClip(TrapClipPath);
         EditorUtility.SetDirty(normalConfig);
         EditorUtility.SetDirty(trapConfig);
 
@@ -273,6 +285,91 @@ public static class AssetForge
         var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
         Object.DestroyImmediate(go);
         return prefab;
+    }
+
+    // ===== Аудио-генератор =====
+
+    static void ForgeAudioClips()
+    {
+        // 12. hit — короткий синус 880 Гц с экспо-затуханием
+        WriteTone(HitClipPath,
+            durationSec: 0.08f,
+            sampleRate: 22050,
+            generator: (t, sr) => Mathf.Sin(t * 2 * Mathf.PI * 880f)
+                                  * Mathf.Exp(-t * 35f) * 0.65f);
+
+        // 13. miss — нисходящий sweep 350 → 140 Гц
+        WriteTone(MissClipPath,
+            durationSec: 0.15f,
+            sampleRate: 22050,
+            generator: (t, sr) =>
+            {
+                var freq = Mathf.Lerp(350f, 140f, t / 0.15f);
+                var env = Mathf.Exp(-t * 18f);
+                return Mathf.Sin(t * 2 * Mathf.PI * freq) * env * 0.55f;
+            });
+
+        // 14. trap — низкий square-подобный buzz с шумом
+        WriteTone(TrapClipPath,
+            durationSec: 0.25f,
+            sampleRate: 22050,
+            generator: (t, sr) =>
+            {
+                var sq = Mathf.Sin(t * 2 * Mathf.PI * 95f) > 0 ? 1f : -1f;
+                var noise = (UnityEngine.Random.value - 0.5f) * 0.3f;
+                var env = Mathf.Min(1f, t * 18f) * Mathf.Exp(-t * 6f);
+                return (sq * 0.5f + noise) * env * 0.55f;
+            });
+
+        // 15. win — восходящее арпеджио C5 E5 G5
+        WriteWinArpeggio(WinClipPath);
+
+        AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+    }
+
+    static void WriteTone(string path, float durationSec, int sampleRate,
+        System.Func<float, int, float> generator)
+    {
+        var len = Mathf.RoundToInt(durationSec * sampleRate);
+        var samples = new float[len];
+        for (int i = 0; i < len; i++)
+        {
+            var t = (float)i / sampleRate;
+            samples[i] = generator(t, sampleRate);
+        }
+        WavWriter.Write(path, samples, sampleRate);
+    }
+
+    static void WriteWinArpeggio(string path)
+    {
+        // 16. Три ноты по 0.18 сек, накладываются с шагом 0.12 — арпеджио
+        int sr = 22050;
+        float total = 0.6f;
+        int len = Mathf.RoundToInt(total * sr);
+        var samples = new float[len];
+        float[] freqs = { 523.25f, 659.26f, 783.99f }; // C5 E5 G5
+        for (int n = 0; n < freqs.Length; n++)
+        {
+            var startT = n * 0.12f;
+            var noteDur = 0.32f;
+            int startI = Mathf.RoundToInt(startT * sr);
+            int noteLen = Mathf.RoundToInt(noteDur * sr);
+            for (int i = 0; i < noteLen && startI + i < len; i++)
+            {
+                var tt = (float)i / sr;
+                var env = Mathf.Exp(-tt * 5f);
+                samples[startI + i] += Mathf.Sin(tt * 2 * Mathf.PI * freqs[n])
+                                       * env * 0.32f;
+            }
+        }
+        WavWriter.Write(path, samples, sr);
+    }
+
+    static AudioClip LoadClip(string path)
+    {
+        var c = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+        if (c == null) Debug.LogWarning($"[AssetForge] Аудио не найдено: {path}");
+        return c;
     }
 
     // ===== PNG-генератор =====

@@ -103,6 +103,8 @@ public static class SceneBuilderGame
         pf.missPenalty = 5;
         pf.missEffectPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
             AssetForge.MissEffectPrefabPath);
+        pf.missClip = AssetDatabase.LoadAssetAtPath<AudioClip>(
+            AssetForge.MissClipPath);
         EditorUtility.SetDirty(pf);
     }
 
@@ -116,6 +118,8 @@ public static class SceneBuilderGame
         var audio = go.AddComponent<AudioSource>();
         audio.playOnAwake = false;
         session.sfxSource = audio;
+        session.winClip = AssetDatabase.LoadAssetAtPath<AudioClip>(
+            AssetForge.WinClipPath);
 
         var easyDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
             AssetForge.DifficultyEasyPath);

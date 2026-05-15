@@ -13,6 +13,10 @@ public class GameOverPanel : MonoBehaviour
     public Text finalScoreText;
     public Button restartButton;
     public Button menuButton;
+    public Button leaderboardButton;
+
+    [Header("Лидерборд")]
+    public NameInputDialog nameDialog;
 
     void OnEnable()
     {
@@ -21,6 +25,8 @@ public class GameOverPanel : MonoBehaviour
             GameSession.Instance.GameOver += OnGameOver;
         if (restartButton != null) restartButton.onClick.AddListener(Restart);
         if (menuButton != null) menuButton.onClick.AddListener(ToMenu);
+        if (leaderboardButton != null)
+            leaderboardButton.onClick.AddListener(ToLeaderboard);
     }
 
     void OnDisable()
@@ -29,6 +35,8 @@ public class GameOverPanel : MonoBehaviour
             GameSession.Instance.GameOver -= OnGameOver;
         if (restartButton != null) restartButton.onClick.RemoveListener(Restart);
         if (menuButton != null) menuButton.onClick.RemoveListener(ToMenu);
+        if (leaderboardButton != null)
+            leaderboardButton.onClick.RemoveListener(ToLeaderboard);
     }
 
     void OnGameOver(int finalScore)
@@ -36,6 +44,32 @@ public class GameOverPanel : MonoBehaviour
         if (root != null) root.SetActive(true);
         if (titleText != null) titleText.text = "Время вышло";
         if (finalScoreText != null) finalScoreText.text = $"Итог: {finalScore}";
+
+        // 3. Лидерборд: если результат проходит в топ-5 — спросить имя
+        var diffId = GameSession.Instance != null
+                  && GameSession.Instance.Difficulty != null
+            ? GameSession.Instance.Difficulty.id
+            : string.Empty;
+
+        if (LeaderboardSaveSystem.QualifiesForTop(finalScore))
+        {
+            if (nameDialog != null)
+            {
+                nameDialog.Open(name =>
+                    LeaderboardSaveSystem.Submit(name, finalScore, diffId));
+            }
+            else
+            {
+                LeaderboardSaveSystem.Submit("Игрок", finalScore, diffId);
+            }
+        }
+    }
+
+    void ToLeaderboard()
+    {
+        // 4. Лидерборд опционален — переход только если сцена есть в BuildSettings
+        if (Application.CanStreamedLevelBeLoaded("Leaderboard"))
+            SceneManager.LoadScene("Leaderboard");
     }
 
     void Restart()

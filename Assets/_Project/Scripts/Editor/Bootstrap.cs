@@ -12,9 +12,10 @@ public static class Bootstrap
         // 1. Генерируем PNG-плейсхолдеры, аудио-плейсхолдеры, конфиги, префабы
         AssetForge.BuildAll();
 
-        // 2. Собираем игровые сцены
+        // 2. Собираем игровые сцены (порядок в BuildSettings: MainMenu, Game, Leaderboard)
         SceneBuilderGame.Build();
         SceneBuilderMainMenu.Build();
+        SceneBuilderLeaderboard.Build();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();

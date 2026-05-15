@@ -9,11 +9,12 @@ public static class Bootstrap
     [MenuItem("Tools/Build All")]
     public static void BuildAll()
     {
-        // 1. Генерируем PNG-плейсхолдеры, конфиги, префабы
+        // 1. Генерируем PNG-плейсхолдеры, аудио-плейсхолдеры, конфиги, префабы
         AssetForge.BuildAll();
 
-        // 2. Собираем сцену Game.unity
+        // 2. Собираем игровые сцены
         SceneBuilderGame.Build();
+        SceneBuilderMainMenu.Build();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();

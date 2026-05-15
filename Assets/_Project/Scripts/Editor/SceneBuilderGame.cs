@@ -173,7 +173,7 @@ public static class SceneBuilderGame
         hudGO.transform.SetParent(canvasGO.transform, false);
         var hud = hudGO.AddComponent<HUD>();
 
-        hud.scoreText = MakeText(
+        hud.scoreText = UiHelpers.Text(
             parent: hudGO.transform,
             name: "ScoreText",
             font: font,
@@ -183,9 +183,9 @@ public static class SceneBuilderGame
             anchoredPos: new Vector2(40, -30),
             size: new Vector2(600, 80),
             alignment: TextAnchor.UpperLeft,
-            startText: "Счёт: 0");
+            text: "Счёт: 0");
 
-        hud.timerText = MakeText(
+        hud.timerText = UiHelpers.Text(
             parent: hudGO.transform,
             name: "TimerText",
             font: font,
@@ -195,7 +195,7 @@ public static class SceneBuilderGame
             anchoredPos: new Vector2(0, -30),
             size: new Vector2(400, 80),
             alignment: TextAnchor.UpperCenter,
-            startText: "Время: 0.0");
+            text: "Время: 0.0");
 
         EditorUtility.SetDirty(hud);
 
@@ -215,11 +215,11 @@ public static class SceneBuilderGame
         var rootImg = rootGO.AddComponent<Image>();
         rootImg.color = new Color(0, 0, 0, 0.75f);
         var rootRT = rootGO.GetComponent<RectTransform>();
-        StretchFull(rootRT);
+        UiHelpers.StretchFull(rootRT);
         go.root = rootGO;
 
         // 2. Title
-        go.titleText = MakeText(
+        go.titleText = UiHelpers.Text(
             parent: rootGO.transform,
             name: "Title",
             font: font,
@@ -229,10 +229,10 @@ public static class SceneBuilderGame
             anchoredPos: new Vector2(0, 160),
             size: new Vector2(900, 140),
             alignment: TextAnchor.MiddleCenter,
-            startText: "Время вышло");
+            text: "Время вышло");
 
         // 3. Финальный счёт
-        go.finalScoreText = MakeText(
+        go.finalScoreText = UiHelpers.Text(
             parent: rootGO.transform,
             name: "FinalScore",
             font: font,
@@ -242,10 +242,10 @@ public static class SceneBuilderGame
             anchoredPos: new Vector2(0, 30),
             size: new Vector2(800, 100),
             alignment: TextAnchor.MiddleCenter,
-            startText: "Итог: 0");
+            text: "Итог: 0");
 
         // 4. Кнопка Заново
-        go.restartButton = MakeButton(
+        go.restartButton = UiHelpers.Button(
             parent: rootGO.transform,
             name: "RestartButton",
             font: font,
@@ -255,7 +255,7 @@ public static class SceneBuilderGame
             size: new Vector2(360, 110));
 
         // 5. Кнопка Меню (на Шаге 1 сцены MainMenu нет; скрипт сам проверит)
-        go.menuButton = MakeButton(
+        go.menuButton = UiHelpers.Button(
             parent: rootGO.transform,
             name: "MenuButton",
             font: font,
@@ -266,71 +266,6 @@ public static class SceneBuilderGame
 
         EditorUtility.SetDirty(go);
         return go;
-    }
-
-    static Text MakeText(Transform parent, string name, Font font,
-        int fontSize, Vector2 anchor, Vector2 pivot, Vector2 anchoredPos,
-        Vector2 size, TextAnchor alignment, string startText)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        var t = go.AddComponent<Text>();
-        t.text = startText;
-        t.font = font;
-        t.fontSize = fontSize;
-        t.color = Color.white;
-        t.alignment = alignment;
-
-        // Контур, чтобы текст был читаем на любом фоне
-        var outline = go.AddComponent<Outline>();
-        outline.effectColor = Color.black;
-        outline.effectDistance = new Vector2(2, -2);
-
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = anchor;
-        rt.anchorMax = anchor;
-        rt.pivot = pivot;
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = size;
-        return t;
-    }
-
-    static Button MakeButton(Transform parent, string name, Font font,
-        string label, Color color, Vector2 anchoredPos, Vector2 size)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-
-        var img = go.AddComponent<Image>();
-        img.color = color;
-        var btn = go.AddComponent<Button>();
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = size;
-
-        var textGO = new GameObject("Text");
-        textGO.transform.SetParent(go.transform, false);
-        var text = textGO.AddComponent<Text>();
-        text.text = label;
-        text.font = font;
-        text.fontSize = 44;
-        text.color = Color.white;
-        text.alignment = TextAnchor.MiddleCenter;
-        var textRT = textGO.GetComponent<RectTransform>();
-        StretchFull(textRT);
-
-        return btn;
-    }
-
-    static void StretchFull(RectTransform rt)
-    {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
     }
 
     static void EnsureDir(string path)

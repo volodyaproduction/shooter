@@ -44,7 +44,7 @@ public static class SceneBuilderLeaderboard
         scaler.matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var font = UiHelpers.LoadProjectFont();
 
         // 5. Заголовок
         UiHelpers.Text(
@@ -60,8 +60,9 @@ public static class SceneBuilderLeaderboard
             text: "Лидерборд");
 
         // 6. Контейнер с LeaderboardView и пятью строками
-        var viewGO = new GameObject("LeaderboardView");
+        var viewGO = new GameObject("LeaderboardView", typeof(RectTransform));
         viewGO.transform.SetParent(canvasGO.transform, false);
+        UiHelpers.StretchFull(viewGO.GetComponent<RectTransform>());
         var view = viewGO.AddComponent<LeaderboardView>();
         view.rankTexts = new Text[LeaderboardSaveSystem.TopSize];
         view.nameTexts = new Text[LeaderboardSaveSystem.TopSize];

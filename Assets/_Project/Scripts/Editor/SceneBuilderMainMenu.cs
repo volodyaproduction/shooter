@@ -44,10 +44,11 @@ public static class SceneBuilderMainMenu
         scaler.matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var font = UiHelpers.LoadProjectFont();
 
-        var menuRoot = new GameObject("Menu");
+        var menuRoot = new GameObject("Menu", typeof(RectTransform));
         menuRoot.transform.SetParent(canvasGO.transform, false);
+        UiHelpers.StretchFull(menuRoot.GetComponent<RectTransform>());
         var menu = menuRoot.AddComponent<MenuController>();
 
         // 5. Заголовок (общий для обеих панелей)

@@ -1,11 +1,28 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
 // Общие фабрики UI-элементов (legacy UnityEngine.UI), используются всеми
-// SceneBuilder*-скриптами. Шрифт — LegacyRuntime.ttf, контур чёрный
-// со смещением (2, -2) для читаемости на любом фоне.
+// SceneBuilder*-скриптами. Шрифт — DejaVu Sans (Bitstream Vera, свободная
+// лицензия) с поддержкой кириллицы. Встроенный Unity LegacyRuntime.ttf в WebGL
+// рендерит только латиницу/цифры — кириллица пропадает.
 public static class UiHelpers
 {
+    public const string ProjectFontPath =
+        "Assets/_Project/Fonts/DejaVuSans.ttf";
+
+    public static Font LoadProjectFont()
+    {
+        var f = AssetDatabase.LoadAssetAtPath<Font>(ProjectFontPath);
+        if (f == null)
+        {
+            Debug.LogWarning("[UiHelpers] DejaVuSans.ttf не найден, " +
+                "fallback на LegacyRuntime.ttf (кириллица будет пропадать)");
+            f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+        return f;
+    }
+
     public static Text Text(Transform parent, string name, Font font,
         int fontSize, Vector2 anchor, Vector2 pivot, Vector2 anchoredPos,
         Vector2 size, TextAnchor alignment, string text)

@@ -22,6 +22,9 @@ public static class BuildScript
 
     public static void BuildWindows()
     {
+        // Регенерируем ассеты и сцены, чтобы сборка была одношаговой
+        Bootstrap.BuildAll();
+
         EnsureDirectory(WinOutDir);
 
         PlayerSettings.companyName = "Shooter";
@@ -42,6 +45,9 @@ public static class BuildScript
 
     public static void BuildWebGL()
     {
+        // Регенерируем ассеты и сцены, чтобы сборка была одношаговой
+        Bootstrap.BuildAll();
+
         EnsureDirectory(WebOutDir);
 
         // 1. WebGL-настройки: Brotli + Fallback=ON (Vercel без vercel.json),

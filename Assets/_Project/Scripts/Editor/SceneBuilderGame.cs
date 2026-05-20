@@ -32,11 +32,11 @@ public static class SceneBuilderGame
         // 5. GameSession (SFX-источник, ссылка на сложность)
         var session = CreateGameSession();
 
-        // 6. Spawner
-        CreateSpawner();
+        // 6. Spawner (sanity-target убран — рендеринг подтвердился)
+        var spawner = CreateSpawner();
 
         // 7. Canvas с HUD и GameOverPanel
-        CreateCanvas();
+        CreateCanvas(spawner);
 
         // 8. Сохраняем и регистрируем в BuildSettings
         EditorSceneManager.MarkSceneDirty(scene);
@@ -91,7 +91,9 @@ public static class SceneBuilderGame
         sr.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
             AssetForge.BackgroundSpritePath);
         sr.sortingOrder = -100;
-        sr.color = new Color(0.16f, 0.20f, 0.27f);
+        // SpriteRenderer.color УМНОЖАЕТСЯ на цвет PNG — оставляем белым,
+        // финальный оттенок задаёт сам PNG (см. AssetForge: фон в нём 35/40/55).
+        sr.color = Color.white;
         // 64x64 PPU=128 → 0.5x0.5 unit. Растягиваем на видимую область + запас
         go.transform.localScale = new Vector3(40f, 24f, 1f);
 
@@ -136,7 +138,7 @@ public static class SceneBuilderGame
 
     // ===== Spawner =====
 
-    static void CreateSpawner()
+    static Spawner CreateSpawner()
     {
         var go = new GameObject("Spawner");
         var sp = go.AddComponent<Spawner>();
@@ -149,11 +151,12 @@ public static class SceneBuilderGame
             AssetForge.TrapConfigPath);
         // Камера найдётся через Camera.main в OnEnable
         EditorUtility.SetDirty(sp);
+        return sp;
     }
 
     // ===== Canvas (HUD + GameOverPanel) =====
 
-    static void CreateCanvas()
+    static void CreateCanvas(Spawner spawner)
     {
         var canvasGO = new GameObject("Canvas");
         var canvas = canvasGO.AddComponent<Canvas>();
@@ -166,11 +169,13 @@ public static class SceneBuilderGame
 
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var font = UiHelpers.LoadProjectFont();
 
-        // 1. HUD: счёт и таймер
-        var hudGO = new GameObject("HUD");
+        // 1. HUD: счёт и таймер. RectTransform обязателен — обёрточный
+        //    GameObject под Canvas без RectTransform ломает позицию детей.
+        var hudGO = new GameObject("HUD", typeof(RectTransform));
         hudGO.transform.SetParent(canvasGO.transform, false);
+        UiHelpers.StretchFull(hudGO.GetComponent<RectTransform>());
         var hud = hudGO.AddComponent<HUD>();
 
         hud.scoreText = UiHelpers.Text(
@@ -197,6 +202,24 @@ public static class SceneBuilderGame
             alignment: TextAnchor.UpperCenter,
             text: "Время: 0.0");
 
+        // Дебаг-индикатор Spawner внизу экрана (временный, до выяснения причины)
+        var dbgText = UiHelpers.Text(
+            parent: hudGO.transform,
+            name: "SpawnerDebug",
+            font: font,
+            fontSize: 22,
+            anchor: new Vector2(0, 0),
+            pivot: new Vector2(0, 0),
+            anchoredPos: new Vector2(20, 20),
+            size: new Vector2(1500, 30),
+            alignment: TextAnchor.LowerLeft,
+            text: "spawner: …");
+        if (spawner != null)
+        {
+            spawner.statusText = dbgText;
+            EditorUtility.SetDirty(spawner);
+        }
+
         EditorUtility.SetDirty(hud);
 
         // 2. GameOverPanel + NameInputDialog
@@ -208,8 +231,9 @@ public static class SceneBuilderGame
 
     static NameInputDialog CreateNameInputDialog(Transform canvasTr, Font font)
     {
-        var go = new GameObject("NameInputDialog");
+        var go = new GameObject("NameInputDialog", typeof(RectTransform));
         go.transform.SetParent(canvasTr, false);
+        UiHelpers.StretchFull(go.GetComponent<RectTransform>());
         var dialog = go.AddComponent<NameInputDialog>();
 
         // 1. Root — затемнение во весь экран
@@ -218,6 +242,7 @@ public static class SceneBuilderGame
         var rootImg = rootGO.AddComponent<Image>();
         rootImg.color = new Color(0, 0, 0, 0.6f);
         UiHelpers.StretchFull(rootGO.GetComponent<RectTransform>());
+        rootGO.SetActive(false);   // не показываем диалог при старте
         dialog.root = rootGO;
 
         // 2. Прямоугольник диалога
@@ -321,8 +346,9 @@ public static class SceneBuilderGame
 
     static GameOverPanel CreateGameOverPanel(Transform canvasTr, Font font)
     {
-        var panelGO = new GameObject("GameOverPanel");
+        var panelGO = new GameObject("GameOverPanel", typeof(RectTransform));
         panelGO.transform.SetParent(canvasTr, false);
+        UiHelpers.StretchFull(panelGO.GetComponent<RectTransform>());
         var go = panelGO.AddComponent<GameOverPanel>();
 
         // 1. Корневой объект (его же будем выключать в OnEnable)
@@ -332,6 +358,7 @@ public static class SceneBuilderGame
         rootImg.color = new Color(0, 0, 0, 0.75f);
         var rootRT = rootGO.GetComponent<RectTransform>();
         UiHelpers.StretchFull(rootRT);
+        rootGO.SetActive(false);   // оверлей конца раунда скрыт до GameOver
         go.root = rootGO;
 
         // 2. Title

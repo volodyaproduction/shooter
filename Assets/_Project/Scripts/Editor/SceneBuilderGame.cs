@@ -227,6 +227,54 @@ public static class SceneBuilderGame
         var dialog = CreateNameInputDialog(canvasGO.transform, font);
         panel.nameDialog = dialog;
         EditorUtility.SetDirty(panel);
+
+        // 3. PausePanel (ESC во время раунда)
+        CreatePausePanel(canvasGO.transform, font);
+    }
+
+    static PauseController CreatePausePanel(Transform canvasTr, Font font)
+    {
+        var panelGO = new GameObject("PausePanel", typeof(RectTransform));
+        panelGO.transform.SetParent(canvasTr, false);
+        UiHelpers.StretchFull(panelGO.GetComponent<RectTransform>());
+        var ctrl = panelGO.AddComponent<PauseController>();
+
+        var rootGO = new GameObject("Root");
+        rootGO.transform.SetParent(panelGO.transform, false);
+        var rootImg = rootGO.AddComponent<Image>();
+        rootImg.color = new Color(0, 0, 0, 0.75f);
+        UiHelpers.StretchFull(rootGO.GetComponent<RectTransform>());
+        rootGO.SetActive(false);
+        ctrl.panel = rootGO;
+
+        UiHelpers.Text(
+            parent: rootGO.transform,
+            name: "Title",
+            font: font,
+            fontSize: 96,
+            anchor: new Vector2(0.5f, 0.5f),
+            pivot: new Vector2(0.5f, 0.5f),
+            anchoredPos: new Vector2(0, 120),
+            size: new Vector2(900, 140),
+            alignment: TextAnchor.MiddleCenter,
+            text: "Пауза");
+
+        ctrl.resumeButton = UiHelpers.Button(
+            parent: rootGO.transform, name: "ResumeButton",
+            font: font, label: "Продолжить",
+            color: new Color(0.2f, 0.6f, 0.9f),
+            anchoredPos: new Vector2(0, -40),
+            size: new Vector2(420, 100));
+
+        ctrl.menuButton = UiHelpers.Button(
+            parent: rootGO.transform, name: "MenuButton",
+            font: font, label: "В меню",
+            color: new Color(0.4f, 0.4f, 0.4f),
+            anchoredPos: new Vector2(0, -160),
+            size: new Vector2(420, 90));
+
+        EditorUtility.SetDirty(ctrl);
+        return ctrl;
     }
 
     static NameInputDialog CreateNameInputDialog(Transform canvasTr, Font font)

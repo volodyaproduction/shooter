@@ -51,7 +51,7 @@ public class MenuController : MonoBehaviour
         var n = PlayerIdentity.GetName();
         nameButtonLabel.text = string.IsNullOrEmpty(n)
             ? "Указать никнейм"
-            : $"Мой никнейм: {n}";
+            : $"Мой никнейм {n}";
     }
 
     void OpenNameDialog()

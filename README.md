@@ -1,31 +1,8 @@
 # Кликер-шутер на Unity 6
 
-2D-кликер: мишени появляются в случайных точках, нужно кликать. Цель — набрать как можно больше очков за 30-секундный раунд. Собрано на **Unity 6.3 LTS (6000.3.15f1)** в headless-режиме — Unity Editor вручную не открывался.
+**Играть:** https://lsh-shooter.vercel.app/
 
-- **WebGL-демо:** ссылка добавится после деплоя на Vercel
-
-## Управление
-
-- **Левая кнопка мыши** или **тап** — клик по мишени; клик по пустому фону = промах (штраф)
-- **ESC** — пауза во время раунда (только на десктопе)
-- В меню — клики по кнопкам; ввод имени появляется один раз после первого раунда
-
-## Функционал по ТЗ
-
-- [x] Мишени появляются в случайных точках через случайные интервалы
-- [x] Клик по мишени → исчезает, очки на экране
-- [x] Раунд ограничен по времени, финальный счёт в диалоге, кнопка «Заново»
-
-**Сделано из дополнительных:**
-
-- [x] Главное меню + **глобальный лидерборд** (все игроки в одной таблице, хранится на сервере)
-- [x] Уникальные никнеймы; имя с `@` впереди превращается в кликабельную Telegram-ссылку прямо из таблицы
-- [x] Мишени-ловушки (минус очки за клик)
-- [x] Штраф за промах мимо мишени
-- [x] Бонус за скорость реакции (чем быстрее кликнул — тем больше очков)
-- [x] Game feel: pop-эффект появления мишени, тряска камеры, партикл-эффекты при попадании
-- [x] Поддержка сенсорного экрана (`Physics2DRaycaster` работает и с мышью, и с тачем)
-- [x] Защита от накрутки счёта (sanity cap + rate limit) — см. раздел ниже
+2D-кликер: мишени появляются в случайных точках, нужно кликать. Цель — набрать как можно больше очков за 30-секундный раунд. Развёрнуто на Vercel через WebGL — играется прямо в браузере. Есть глобальный лидерборд, общий с [платформером](https://lsh-platformer.vercel.app/). Собрано на **Unity 6.3 LTS (6000.3.15f1)** в headless-режиме — Unity Editor вручную не открывался.
 
 ---
 
@@ -38,23 +15,16 @@ cd shooter
 ./build.sh        # web — дефолт
 ```
 
-Результат — в `web/`. Размер ~8 МБ по сети после Brotli. Скрипт сам регенерирует ассеты, конфиги и сцены (`Bootstrap.BuildAll`) перед сборкой.
-
-Скрипт ожидает Unity по дефолтному пути Unity Hub. Если у тебя другое расположение — `UNITY=/path/to/Unity ./build.sh`. Полная команда CLI и пояснение флагов — в разделе [«Unity CLI»](#unity-cli-как-создавался-проект) ниже.
+Результат — в `web/`, ~8 МБ после Brotli. Скрипт ожидает Unity по дефолтному пути Unity Hub; иначе `UNITY=/path/to/Unity ./build.sh`.
 
 ### 2. Локальный запуск в браузере
 
-Двойным кликом по `web/index.html` игра **не откроется** — браузер из соображений безопасности запрещает WebAssembly-приложениям загружать соседние файлы (`.wasm`, `.data`) напрямую с диска. Эти файлы должны прийти по HTTP. Поэтому нужно поднять локальный HTTP-сервер в папке `web/`.
-
-Проще всего — встроенный сервер из **Python 3** (на macOS он установлен по умолчанию, на Linux — через пакетный менеджер):
+WebAssembly не грузится с `file://` — нужен HTTP. Любой статический сервер в `web/`, например:
 
 ```bash
-cd web
-python3 -m http.server 3001
-# открыть в браузере http://localhost:3001/
+cd web && python3 -m http.server 3001
+# http://localhost:3001/
 ```
-
-Если Python не хочется — подойдёт любой статический файловый сервер: `npx serve` (нужен Node.js), `caddy file-server`, VS Code расширение «Live Server» и т.п. Python выбран потому, что он почти всегда уже есть на машине разработчика и команда — однострочник.
 
 ### 3. Сборка `.exe` для Windows
 
@@ -63,108 +33,63 @@ cd shooter
 ./build.sh win
 ```
 
-Результат — `build/Windows/Shooter.exe` (запуск с `Shooter_Data/` и `UnityPlayer.dll` рядом). Кросс-билд с macOS работает; для запуска нужна Windows-машина.
+Результат — `build/Windows/Shooter.exe`. Кросс-билд с macOS работает.
 
 ### 4. Деплой на Vercel
 
-В dashboard Vercel: **New Project** → выбрать репозиторий `shooter` → в **Build and Output Settings** установить **Output Directory = `web`** → **Deploy**. Vercel раздаёт собранный билд из `web/` и автоматически поднимает serverless-функции из папки `api/`.
-
-**Глобальный лидерборд требует Upstash Redis:**
-
-1. В Vercel → проект → **Storage → Create Database → Upstash for Redis** (бесплатный тир).
-2. Подключить базу к проекту (`Connect Project`). Vercel сам пропишет переменные окружения `KV_REST_API_URL` и `KV_REST_API_TOKEN`.
-3. Сделать Redeploy, чтобы переменные подхватились.
-
-Та же база может быть подключена к другому проекту (например, платформеру) — данные разделены префиксом ключей (`shooter:*`, `platformer:*`).
-
----
-
-## Глобальный лидерборд
-
-Все игроки соревнуются в одной таблице. Имена уникальны: если ник занят — сервер вернёт ошибку и попросит выбрать другое. Имя с `@` впереди (например, `@vova`) в лидерборде становится кликабельной ссылкой на `t.me/vova`.
-
-### Как игра узнаёт «своего» игрока
-
-При первом запуске игра генерирует **`player_id`** — случайный 128-битный GUID, который кладётся в `PlayerPrefs` (в WebGL это IndexedDB браузера). Сервер опознаёт игрока по этому идентификатору: чужой счёт переписать нельзя без знания чужого `player_id`, а GUID неугадываем.
-
-`player_id` переживает деплой Vercel и перезагрузку браузера, но не переживает чистку данных сайта и не синхронизируется между устройствами (это уже потребует логина).
-
-### Хранение в Redis
-
-```
-shooter:scores       ZSET  player_id  → лучший счёт          (топ строится отсюда)
-shooter:names        Hash  player_id  → имя
-shooter:name-index   Hash  имя_lower  → player_id            (для проверки уникальности)
-shooter:rate:<id>    Key   1, EX 25                          (rate limit)
-```
-
-### Защита от накрутки
-
-Web-игра принципиально не может полностью защититься от подделки запросов из консоли — клиент исполняется в браузере и любое его обращение к серверу можно повторить вручную. Поэтому ставим два дешёвых барьера, отсекающих наивные накрутки:
-
-- **Sanity cap:** счёт выше теоретического максимума за раунд (`2000` очков при текущих параметрах) отклоняется на сервере. Запрос вида «999999» не пройдёт.
-- **Rate limit:** один сабмит на `player_id` раз в 25 секунд (раунд — 30 секунд, окно чуть короче, чтобы валидный submit после рестарта не упирался в limit). Атомарно через `SET NX EX 25` в Redis. Чаще одного «рекорда» за раунд накрутить нельзя.
-
-Чего эти меры **не закрывают:**
-
-- В теории можно сгенерить новый `player_id` и слать счёт раз в 25 сек. Но это уже не проще, чем сыграть честно.
-- Если кто-то увидит твой `player_id` (через DevTools на твоей машине, общий компьютер, скриншот IndexedDB), он может из консоли подменить твоё имя или сжечь твой rate-limit. Угадать чужой GUID нельзя, утечка — единственный путь. Подписать `player_id` HMAC-секретом было бы дешёвой защитой, но для дружеского кликера риск маргинальный.
-
-Серьёзный анти-чит (подписанные сессии, серверная игровая логика) — оверкилл для этого проекта.
+**New Project** → выбрать репозиторий → **Output Directory = `web`** → **Deploy**. Лидерборд требует Upstash Redis: **Storage → Create Database → Upstash for Redis** → подключить к проекту → Redeploy. Vercel сам пропишет `KV_REST_API_URL` и `KV_REST_API_TOKEN`. Одну базу можно подключить к обоим проектам — ключи разведены префиксом (`shooter:*`, `platformer:*`).
 
 ---
 
 ## Структура проекта
 
-Разбита по назначению: что выполняется в игре, что только собирает проект, где ассеты, где результаты сборки.
-
 ### Игровой код (попадает в билд)
 
 ```
 Assets/_Project/Scripts/
-├── Core/
-│   ├── GameSession.cs              ← singleton раунда, счёт, таймер, события
-│   ├── PlayerIdentity.cs           ← GUID игрока + текущее имя (PlayerPrefs)
-│   └── LeaderboardClient.cs        ← HTTP-клиент сетевого лидерборда
-├── Data/                            ← ScriptableObject-конфиги
-│   ├── DifficultyConfig.cs         ← параметры раунда
-│   └── TargetTypeConfig.cs         ← тип мишени (визуал + очки)
-├── Gameplay/
-│   ├── Spawner.cs                  ← цикл спавна мишеней
-│   ├── Target.cs                   ← клик, очки, эффекты
-│   └── Playfield.cs                ← клик «в пустоту» = промах
-└── UI/
-    ├── HUD.cs                      ← счёт + таймер
-    ├── GameOverPanel.cs            ← итог раунда + личный рекорд
-    ├── NameInputDialog.cs          ← ввод и смена имени (с проверкой на сервере)
-    ├── MenuController.cs           ← главное меню
-    ├── PauseController.cs          ← пауза по ESC и бургер-кнопке
-    └── LeaderboardView.cs          ← список топа, медали, t.me-ссылки
+├── Core/                                ← 345 LOC
+│   ├── GameSession.cs                   ← singleton раунда, счёт, таймер, события
+│   ├── PlayerIdentity.cs                ← GUID игрока + текущее имя (PlayerPrefs)
+│   └── LeaderboardClient.cs             ← HTTP-клиент сетевого лидерборда
+├── Data/                                ← 72 LOC
+│   ├── DifficultyConfig.cs              ← параметры раунда
+│   └── TargetTypeConfig.cs              ← тип мишени (визуал + очки)
+├── Gameplay/                            ← 302 LOC
+│   ├── Spawner.cs                       ← цикл спавна мишеней
+│   ├── Target.cs                        ← клик, очки, эффекты
+│   └── Playfield.cs                     ← клик «в пустоту» = промах
+└── UI/                                  ← 711 LOC
+    ├── HUD.cs                           ← счёт + таймер
+    ├── GameOverPanel.cs                 ← итог раунда + личный рекорд
+    ├── NameInputDialog.cs               ← ввод и смена имени
+    ├── MenuController.cs                ← главное меню
+    ├── PauseController.cs               ← пауза по ESC и бургер-кнопке
+    └── LeaderboardView.cs               ← список топа, медали, t.me-ссылки
 ```
 
-### Серверный код (Vercel serverless, в `shooter/api/`)
+### Серверный код (Vercel serverless)
 
 ```
-api/
-├── _redis.js                       ← общая обёртка над Upstash REST API
-├── leaderboard-top.js              ← GET — топ всех игроков по убыванию
-├── leaderboard-save-score.js       ← POST — записать счёт (sanity cap + rate limit)
-└── leaderboard-change-name.js      ← POST — задать/сменить имя (с проверкой уникальности)
+api/                                     ← 259 LOC
+├── _redis.js                            ← общая обёртка над Upstash REST API
+├── leaderboard-top.js                   ← GET — топ всех игроков по убыванию
+├── leaderboard-save-score.js            ← POST — записать счёт (sanity cap + rate limit)
+└── leaderboard-change-name.js           ← POST — задать/сменить имя (с проверкой уникальности)
 ```
 
-### Editor-инфраструктура (в билд **не** попадает) — ~1640 строк
+### Editor-инфраструктура (в билд **не** попадает)
 
 ```
-Assets/_Project/Scripts/Editor/
-├── Bootstrap.cs                       ← главный entry: BuildAll
-├── AssetForge.cs                      ← генерация PNG, WAV, ScriptableObject (~425 LOC)
-├── SceneBuilderGame.cs                ← собирает Game.unity (~416 LOC)
-├── SceneBuilderMainMenu.cs            ← собирает MainMenu.unity
-├── SceneBuilderLeaderboard.cs         ← собирает Leaderboard.unity
-├── BuildScript.cs                     ← Build WebGL / Windows (~122 LOC)
-├── WavWriter.cs                       ← PCM → WAV (16-bit mono)
-├── UiHelpers.cs                       ← фабрики Text/Button
-└── GeneratedTexturePostprocessor.cs   ← PPU=128 для Art/Generated
+Assets/_Project/Scripts/Editor/          ← 1644 LOC
+├── Bootstrap.cs                         ← главный entry: BuildAll
+├── AssetForge.cs                        ← генерация PNG, WAV, ScriptableObject (425 LOC)
+├── SceneBuilderGame.cs                  ← собирает Game.unity (416 LOC)
+├── SceneBuilderMainMenu.cs              ← собирает MainMenu.unity (314 LOC)
+├── SceneBuilderLeaderboard.cs           ← собирает Leaderboard.unity (171 LOC)
+├── BuildScript.cs                       ← Build WebGL / Windows (122 LOC)
+├── UiHelpers.cs                         ← фабрики Text/Button
+├── WavWriter.cs                         ← PCM → WAV (16-bit mono)
+└── GeneratedTexturePostprocessor.cs     ← PPU=128 для Art/Generated
 ```
 
 **Что конкретно делает эта папка:**
@@ -173,9 +98,7 @@ Assets/_Project/Scripts/Editor/
 - `SceneBuilderGame/MainMenu/Leaderboard.cs` — создают три `.unity`-сцены: камера, EventSystem, Canvas с панелями HUD/GameOver/NameInput, кнопки меню, привязки `onClick`.
 - `Bootstrap.cs` — оркестрирует AssetForge + три SceneBuilder'а в правильном порядке.
 
-**Если бы открывали Unity Editor вручную, этой папки бы вообще не было:** спрайты рисовались бы в Photoshop, кнопки расставлялись в Canvas мышкой, `onClick` привязывались бы в инспекторе. ~1640 строк Editor-папки — это замена этих кликов мышкой и работы в графическом редакторе через C#.
-
-`BuildScript.cs` (~122 строки) был бы нужен в любом случае — это запуск сборки через CLI, заменяет команду `File → Build` в редакторе.
+**Если бы открывали Unity Editor вручную, этой папки бы вообще не было:** спрайты рисовались бы в Photoshop, кнопки расставлялись в Canvas мышкой, `onClick` привязывались бы в инспекторе. 1644 строки Editor-папки — это замена этих кликов через C#. `BuildScript.cs` нужен в любом случае — он заменяет команду `File → Build` в редакторе.
 
 ### Сцены, конфиги, префабы (генерируются автоматически)
 
@@ -186,13 +109,13 @@ Assets/_Project/
 │   ├── Game.unity                       ← игровой раунд
 │   └── Leaderboard.unity                ← список всех игроков
 ├── Configs/                             ← .asset, генерируются AssetForge
-│   ├── Difficulty_Normal.asset            ← единственный пресет сложности
+│   ├── Difficulty_Normal.asset          ← единственный пресет сложности
 │   └── NormalTarget.asset, TrapTarget.asset
 ├── Prefabs/Target.prefab                ← генерируется AssetForge
 └── VFX/HitEffect.prefab, MissEffect.prefab  ← генерируются AssetForge
 ```
 
-### Ассеты (см. раздел «Спрайты и звуки»)
+### Ассеты
 
 ```
 Assets/_Project/
@@ -211,6 +134,32 @@ shooter/
 ├── build/Windows/      ← локальный .exe-билд
 └── build.sh            ← одношаговая сборка (web|win)
 ```
+
+---
+
+## Глобальный лидерборд
+
+Все игроки соревнуются в одной таблице. Имена уникальны: если ник занят — сервер вернёт ошибку. Имя с `@` впереди (`@vova`) в таблице становится кликабельной ссылкой на `t.me/vova`.
+
+### Как игра узнаёт «своего» игрока
+
+При первом запуске генерируется **`player_id`** — случайный 128-битный GUID в `PlayerPrefs` (в WebGL это IndexedDB браузера). Сервер опознаёт игрока по нему: чужой счёт переписать нельзя без знания чужого `player_id`, а GUID неугадываем. Переживает деплой Vercel и перезагрузку браузера, не переживает чистку данных сайта и не синхронизируется между устройствами.
+
+### Хранение в Redis
+
+```
+shooter:scores       ZSET  player_id  → лучший счёт          (топ строится отсюда)
+shooter:names        Hash  player_id  → имя
+shooter:name-index   Hash  имя_lower  → player_id            (для проверки уникальности)
+shooter:rate:<id>    Key   1, EX 25                          (rate limit)
+```
+
+### Защита от накрутки
+
+- **Sanity cap:** счёт выше `2000` (теоретический максимум за раунд) отклоняется на сервере.
+- **Rate limit:** один сабмит на `player_id` раз в 25 секунд (раунд 30 сек). Атомарно через `SET NX EX 25` в Redis.
+
+GUID хранится в IndexedDB без HMAC-подписи — для дружеского кликера хватает. Серьёзный анти-чит (подписанные сессии, серверная игровая логика) — оверкилл для этого проекта.
 
 ---
 
@@ -242,57 +191,22 @@ shooter/
 
 ---
 
-## Технические решения
-
-- **`ScriptableObject`-конфиги (`DifficultyConfig`, `TargetTypeConfig`)** — параметры раунда и типы мишеней лежат в `.asset` через `AssetForge`. Поменять баланс = поправить числа в `ForgeNormalDifficulty()`, код геймплея не правится.
-- **Один пресет сложности** — отдельные «Легко / Сложно» убраны: они путали игроков и не имели смысла рядом с глобальным лидербордом (играть в Легко и попасть в общий топ — нечестно). Текущие параметры подобраны на ощущениях «весело-плотно»: спавн раз в 0.45–0.85 с, lifetime 1.5 с, 20% ловушек.
-- **`DefaultExecutionOrder(-100)` на `GameSession`** — гарантирует `Awake` раньше остальных компонентов; подписки в `OnEnable` других объектов уже находят `Instance`.
-- **Спавн через `Update`, не корутиной** — корутина в WebGL/IL2CPP может «умереть» после `WaitForSeconds`/`MissingReference` и оставить игру без новых мишеней.
-- **`Physics2DRaycaster.maxRayIntersections = 1`** — клик с `Target` не пробьётся в `Playfield` ниже по `z`.
-- **WebGL: Brotli + `Decompression Fallback = ON`** — Unity сам распаковывает в JS, билд работает на любом хостинге без правки заголовков (Vercel, Netlify, itch.io). Размен — лоадер на ~150 КБ тяжелее.
-- **Адаптивный canvas через пост-патч в `build.sh`** — Unity по дефолту прибивает canvas к фиксированным 960×600, что не помещается на ноутбуках с малой высотой экрана. После сборки `build.sh` правит `web/index.html` через `python3`: заменяет фиксированный размер на `fitCanvas()`, который держит пропорции 16:10 и занимает 95% свободного места в окне. На мобильных ветка не задевается — там canvas остаётся на весь viewport.
-- **Шрифт `DejaVuSans.ttf`** — встроенный `LegacyRuntime.ttf` не содержит кириллицы.
-
----
-
 ## Unity CLI: как создавался проект
 
-### Что такое «Unity CLI»
+«Unity CLI» — это **не отдельный инструмент**, а тот же бинарник Unity, запущенный из терминала с `-batchmode`. Editor не показывается, а просто исполняется указанный C#-метод из `Assets/_Project/Scripts/Editor/`. Это способ заставить редактор сделать что-то без человека за мышкой.
 
-Это **не отдельный инструмент**. «Unity CLI» — это тот же самый бинарник Unity, который обычно открывает графический редактор, **но запущенный из терминала с флагом `-batchmode`**. В этом режиме Unity не показывает окно, а просто исполняет указанный C#-метод из папки `Assets/_Project/Scripts/Editor/` и выходит. То есть это **не способ программировать Unity, а способ заставить редактор сделать что-то без человека за мышкой**.
-
-### Разработка делится на 3 этапа — Unity CLI нужен только в двух
-
-**Этап 1. Игровая логика — Unity CLI НЕ нужен.**
-`GameSession.cs`, `Spawner.cs`, `Target.cs`, `MenuController.cs` и другие файлы в `Core/`, `Data/`, `Gameplay/`, `UI/` — это **обычный C#-код**. Агент пишет их как любые исходники, в текстовом редакторе. Unity при этом не запускается. Эти скрипты потом просто компилятся вместе с билдом.
-
-**Этап 2. Сцены, спрайты, звуки, конфиги — Unity CLI НУЖЕН.**
-Три `.unity`-файла (главное меню, игра, лидерборд), PNG-плейсхолдеры мишеней, WAV-плейсхолдеры звуков, `ScriptableObject`-конфиги, префабы Target/HitEffect/MissEffect — всё это не текст, который агент мог бы написать руками. В нормальной разработке:
-- Сцены собирают **мышкой в Unity Editor**.
-- Спрайты рисуют в **Photoshop**.
-- Звуки делают в **Audacity** или скачивают.
-- Конфиги создают через **Create → ScriptableObject**.
-
-Агент Editor не открывал, в Photoshop не работал. Чтобы получить всё это всё равно, агент:
-1. Пишет `SceneBuilder*.cs` — программное описание сцен (как «мышкой в редакторе»).
-2. Пишет `AssetForge.cs` — программно **рисует PNG** через `Texture2D.SetPixels32()` и **синтезирует WAV** через прямую запись PCM-сэмплов.
-3. Запускает Unity из терминала: тот исполняет `Bootstrap.BuildAll()` и сохраняет всё это на диск.
-
-**Этап 3. Сборка билда (`.wasm`, `.exe`) — Unity CLI НУЖЕН.**
-Финальные артефакты получаются через `BuildPipeline.BuildPlayer(...)` в `BuildScript.cs`. Это **тот же механизм, что при клике `File → Build` в редакторе**, но вызванный из CLI. Никаких альтернатив тут нет — собрать билд без Unity физически нельзя.
-
-### Сводная таблица
+### Что делает Unity CLI vs обычный C#
 
 | Этап | Что делает агент | Unity CLI? |
 |---|---|---|
 | Игровая логика (`Core/`, `Data/`, `Gameplay/`, `UI/`) | пишет `.cs`-файлы как обычные исходники | ❌ не нужен |
-| Спрайты, звуки, конфиги, префабы | пишет `AssetForge.cs` (рисует пикселями, пишет PCM) | ✅ запускает `Bootstrap.BuildAll` |
-| Три сцены (MainMenu, Game, Leaderboard) | пишет `SceneBuilder*.cs` (описание «как мышкой») | ✅ запускает `Bootstrap.BuildAll` |
-| Сборка WebGL / Windows | (готов `BuildScript.cs`) | ✅ запускает `BuildScript.BuildWebGL/Windows` |
+| Спрайты, звуки, конфиги, префабы | пишет `AssetForge.cs` (рисует пикселями, пишет PCM) | ✅ `Bootstrap.BuildAll` |
+| Три сцены (MainMenu, Game, Leaderboard) | пишет `SceneBuilder*.cs` (описание «как мышкой») | ✅ `Bootstrap.BuildAll` |
+| Сборка WebGL / Windows | (готов `BuildScript.cs`) | ✅ `BuildScript.BuildWebGL/Windows` |
 
-### Команда Unity CLI
+Без CLI всё это делалось бы вручную: спрайты — в Photoshop, сцены — мышкой в Hierarchy, конфиги — через `Create → ScriptableObject`. 1644 строки Editor-папки заменяют эти клики на C#-код.
 
-Этапы 2 и 3 запускаются **одной командой** — `BuildScript.BuildWebGL` сам вызывает `Bootstrap.BuildAll()` в начале:
+### Команда
 
 ```bash
 UNITY="/Applications/Unity/Hub/Editor/6000.3.15f1/Unity.app/Contents/MacOS/Unity"
@@ -301,56 +215,36 @@ UNITY="/Applications/Unity/Hub/Editor/6000.3.15f1/Unity.app/Contents/MacOS/Unity
          -quit -logFile -
 ```
 
-| Флаг | Значение в `build.sh` | Обязателен | Что без него |
-|---|---|---|---|
-| `-batchmode` | флаг включён | да | Unity откроет GUI, команда зависнет |
-| `-projectPath` | `$PROJECT_DIR` (корень проекта) | да | Unity не поймёт какой проект собирать |
-| `-executeMethod` | `BuildScript.BuildWebGL` или `BuildScript.BuildWindows` (по аргументу `web`/`win`) | да | нечего вызывать |
-| `-quit` | флаг включён | да (после `-executeMethod`) | Unity отработает метод и продолжит висеть |
-| `-nographics` | флаг включён | нет | стандартный «безопасный дефолт»: без него Unity создаёт скрытый GL-контекст. На CI без GPU упадёт. |
-| `-logFile` | `-` (stdout) | нет | без флага — логи в `~/Library/Logs/Unity/Editor.log`. С тире (`-`) — в stdout, прямо в терминал. |
+| Флаг | Обязателен | Что без него |
+|---|---|---|
+| `-batchmode` | да | Unity откроет GUI, команда зависнет |
+| `-projectPath` | да | Unity не поймёт какой проект собирать |
+| `-executeMethod` | да | нечего вызывать |
+| `-quit` | да | Unity отработает метод и продолжит висеть |
+| `-nographics` | нет | без него Unity создаёт скрытый GL-контекст. На CI без GPU упадёт. |
+| `-logFile -` | нет | без флага логи в `~/Library/Logs/Unity/Editor.log`. С `-` — в stdout. |
 
-В обычной работе это обёрнуто в `build.sh` в корне проекта (см. блок «Сборка и запуск» выше). `BuildScript.BuildWebGL/BuildWindows` сам вызывает `Bootstrap.BuildAll()` в начале, поэтому одной команды хватает на всё.
+`BuildScript.BuildWebGL/BuildWindows` сам вызывает `Bootstrap.BuildAll()` в начале, поэтому одной команды хватает на всё.
 
-`Bootstrap.BuildAll` (этап 2) оркестрирует:
+### Когда запускать `./build.sh` при разработке
 
-1. `AssetForge.BuildAll()` — генерирует PNG-плейсхолдеры, PCM-WAV, 3 ScriptableObject-конфига (1 пресет сложности + 2 типа мишеней), 3 префаба (`Target`, `HitEffect`, `MissEffect`).
-2. `SceneBuilderGame.Build()` — собирает `Game.unity`.
-3. `SceneBuilderMainMenu.Build()` — собирает `MainMenu.unity`.
-4. `SceneBuilderLeaderboard.Build()` — собирает `Leaderboard.unity`.
-
-### Когда снова запускать `./build.sh` при разработке фичи
-
-Открывать Unity Editor не нужно ни на одном шаге — любое изменение применяется одной и той же командой:
-
-| Что меняешь | Что запускать |
-|---|---|
-| Логику в runtime-скрипте (`Target.cs`, `Spawner.cs`, `GameSession.cs`) | `./build.sh` |
-| Параметры сложности (правишь `AssetForge.ForgeNormalDifficulty()`) | `./build.sh` |
-| Внешний вид мишени (правишь `AssetForge.MakeDiskTexture(...)`) | `./build.sh` |
-| Состав сцены, новые объекты (правишь `SceneBuilder*.cs`) | `./build.sh` |
-| Положить новый спрайт/звук в `Art/Generated/` или `Audio/Generated/` с тем же именем | `./build.sh` |
-| Параметры тегов / слоёв / Input (правишь `ProjectSettings/*.asset`) | `./build.sh` |
-
-Короткое правило: **любая фича = правка C# → `./build.sh`.**
+Открывать Unity Editor не нужно ни на одном шаге — **любое изменение = правка C# → `./build.sh`** (логика, конфиги, спрайты, сцены, ProjectSettings — всё одной командой).
 
 ---
 
-## Что можно улучшить
+## Что осталось
 
-- **Оффлайн-кэш лидерборда:** сейчас при оффлайне таблица показывает «нет связи». Если игра пойдёт в продакшен на ненадёжных сетях, нужен fallback на `PlayerPrefs`-кэш последнего ответа.
-- **`Instantiate` / `Destroy` мишеней каждый кадр-другой** — для коротких раундов (<50 мишеней) Object Pool оверкилл, но при mass-spawn имеет смысл `UnityEngine.Pool`.
-- **Tween-эффекты на корутинах** (`PopIn`, `Shake`) — для большого числа эффектов лучше DOTween/PrimeTween (zero-alloc, не падают при `Destroy`).
-- **Спрайты — плейсхолдеры из примитивов.** Замена на CC0-ассеты (kenney.nl) — без правок кода, см. блок «Спрайты и звуки».
-- **Legacy UGUI `Text`** вместо TextMeshPro — сознательный размен для batch-mode; для типографики стоит подключить TMP через `AssetDatabase.ImportPackage`.
+### Улучшения функциональности
 
----
+- **Оффлайн-кэш лидерборда.** Сейчас при оффлайне таблица показывает «нет связи». В продакшене на ненадёжных сетях — fallback на `PlayerPrefs`-кэш последнего ответа.
+- **Object Pool для мишеней.** Сейчас `Instantiate`/`Destroy` каждый кадр-другой; для коротких раундов (<50 мишеней) оверкилл, но при mass-spawn — `UnityEngine.Pool`.
+- **Tween-эффекты на DOTween/PrimeTween.** Сейчас `PopIn`/`Shake` на корутинах; для большого числа эффектов лучше zero-alloc.
+- **Замена плейсхолдер-спрайтов на CC0** (kenney.nl) — без правок кода.
+- **TextMeshPro вместо Legacy UGUI `Text`** — для типографики.
 
-## Рефакторинг на будущее
+### Рефакторинг архитектуры
 
-Что осталось «как есть» при подготовке к ревью — не блокирует функциональность, но требует отдельной итерации:
-
-- **Дубликаты с платформером (~1300 LOC).** `api/_redis.js`, `leaderboard-*.js`, `Core/LeaderboardClient.cs`, `Core/PlayerIdentity.cs`, `UI/NameInputDialog.cs`, `UI/LeaderboardView.cs`, `UI/HUD.cs`, `UI/PauseController.cs`, `UI/MenuController.cs` отличаются между шутером и платформером только префиксом ключей Redis/PlayerPrefs и парой строк. Самый аккуратный путь — вынести в общий модуль (UPM-пакет в `Packages/com.silkin.shared/` или симлинки на корневой `_shared/`). Не сделано в этой итерации: миграция двух Unity-проектов на общий пакет требует отдельной проверки, что асемблии и meta-файлы переживут переход.
-- **`isNewRecord` ложное срабатывание.** В `api/leaderboard-save-score.js` поле возвращается через `personalBest === score`, поэтому повторная отправка того же рекорда после истечения rate-limit вернёт `true`, хотя `ZADD GT` не обновил запись. Лечится сравнением старого и нового значения через `ZSCORE` до и после `ZADD`.
-- **Нет автотестов на API.** Уникальность ника, rate-limit, повторный submit, граничные score — всё проверялось руками. Минимальный набор Vitest-тестов с моком Upstash REST упростил бы будущие правки серверной логики.
-- **`web/Build/*.unityweb` лежит в git** — раздувает репозиторий и историю коммитов. В новом проекте лучше держать билды вне git и собирать в CI.
+- **Дубликаты с платформером (~1300 LOC).** `api/_redis.js`, `leaderboard-*.js`, `Core/LeaderboardClient.cs`, `Core/PlayerIdentity.cs`, `UI/NameInputDialog.cs`, `UI/LeaderboardView.cs`, `UI/HUD.cs`, `UI/PauseController.cs`, `UI/MenuController.cs` отличаются только префиксом ключей Redis/PlayerPrefs и парой строк. Аккуратный путь — UPM-пакет в `Packages/com.silkin.shared/` или симлинки на корневой `_shared/`. Не сделано в этой итерации: миграция двух Unity-проектов на общий пакет требует отдельной проверки, что асемблии и meta-файлы переживут переход.
+- **`isNewRecord` ложное срабатывание.** В `api/leaderboard-save-score.js` поле возвращается через `personalBest === score` — повторная отправка того же рекорда после rate-limit вернёт `true`, хотя `ZADD GT` не обновил запись. Лечится сравнением через `ZSCORE` до и после `ZADD`.
+- **Нет автотестов на API.** Уникальность ника, rate-limit, повторный submit, граничные score проверялись руками. Минимум — Vitest с моком Upstash REST.
+- **`web/Build/*.unityweb` в git** — раздувает репозиторий и историю коммитов. Билды лучше держать вне git и собирать в CI.

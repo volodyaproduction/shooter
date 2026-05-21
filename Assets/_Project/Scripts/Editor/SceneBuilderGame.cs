@@ -228,8 +228,43 @@ public static class SceneBuilderGame
         panel.nameDialog = dialog;
         EditorUtility.SetDirty(panel);
 
-        // 3. PausePanel (ESC во время раунда)
-        CreatePausePanel(canvasGO.transform, font);
+        // 3. PausePanel (ESC во время раунда) + бургер-кнопка в углу
+        var pauseCtrl = CreatePausePanel(canvasGO.transform, font);
+        pauseCtrl.openButton = CreateBurgerButton(canvasGO.transform);
+        EditorUtility.SetDirty(pauseCtrl);
+    }
+
+    static Button CreateBurgerButton(Transform canvas)
+    {
+        // Квадратная кнопка в правом верхнем углу, 3 белые полоски — Image,
+        // без шрифта (юникод-глифа ☰ нет в Roboto-subset платформера; делаем
+        // одинаково в обеих играх для единого исходника).
+        var go = new GameObject("PauseOpenButton");
+        go.transform.SetParent(canvas, false);
+        var img = go.AddComponent<Image>();
+        img.color = new Color(1f, 1f, 1f, 0.2f);
+        var btn = go.AddComponent<Button>();
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1, 1);
+        rt.anchorMax = new Vector2(1, 1);
+        rt.pivot = new Vector2(1, 1);
+        rt.anchoredPosition = new Vector2(-30, -30);
+        rt.sizeDelta = new Vector2(90, 90);
+
+        for (int i = 0; i < 3; i++)
+        {
+            var line = new GameObject($"Line{i + 1}");
+            line.transform.SetParent(go.transform, false);
+            var lineImg = line.AddComponent<Image>();
+            lineImg.color = Color.white;
+            var lrt = line.GetComponent<RectTransform>();
+            lrt.anchorMin = new Vector2(0.5f, 0.5f);
+            lrt.anchorMax = new Vector2(0.5f, 0.5f);
+            lrt.pivot = new Vector2(0.5f, 0.5f);
+            lrt.anchoredPosition = new Vector2(0, 16 - i * 16);
+            lrt.sizeDelta = new Vector2(50, 6);
+        }
+        return btn;
     }
 
     static PauseController CreatePausePanel(Transform canvasTr, Font font)

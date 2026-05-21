@@ -103,7 +103,7 @@ shooter:rate:<id>    Key   1, EX 25                          (rate limit)
 Web-игра принципиально не может полностью защититься от подделки запросов из консоли — клиент исполняется в браузере и любое его обращение к серверу можно повторить вручную. Поэтому ставим два дешёвых барьера, отсекающих наивные накрутки:
 
 - **Sanity cap:** счёт выше теоретического максимума за раунд (`2000` очков при текущих параметрах) отклоняется на сервере. Запрос вида «999999» не пройдёт.
-- **Rate limit:** один сабмит на `player_id` раз в 25 секунд (длительность раунда). Атомарно через `SET NX EX 25` в Redis. Чаще одного «рекорда» за раунд накрутить нельзя.
+- **Rate limit:** один сабмит на `player_id` раз в 25 секунд (раунд — 30 секунд, окно чуть короче, чтобы валидный submit после рестарта не упирался в limit). Атомарно через `SET NX EX 25` в Redis. Чаще одного «рекорда» за раунд накрутить нельзя.
 
 Чего эти меры **не закрывают:**
 
@@ -138,7 +138,8 @@ Assets/_Project/Scripts/
     ├── GameOverPanel.cs            ← итог раунда + личный рекорд
     ├── NameInputDialog.cs          ← ввод и смена имени (с проверкой на сервере)
     ├── MenuController.cs           ← главное меню
-    └── LeaderboardView.cs          ← бесконечный скролл, медали, t.me-ссылки
+    ├── PauseController.cs          ← пауза по ESC и бургер-кнопке
+    └── LeaderboardView.cs          ← список топа, медали, t.me-ссылки
 ```
 
 ### Серверный код (Vercel serverless, в `shooter/api/`)
@@ -151,18 +152,19 @@ api/
 └── leaderboard-change-name.js      ← POST — задать/сменить имя (с проверкой уникальности)
 ```
 
-### Editor-инфраструктура (в билд **не** попадает) — 1585 строк
+### Editor-инфраструктура (в билд **не** попадает) — ~1640 строк
 
 ```
 Assets/_Project/Scripts/Editor/
-├── Bootstrap.cs                   ← главный entry: BuildAll
-├── AssetForge.cs                  ← генерация PNG, WAV, ScriptableObject (463 LOC)
-├── SceneBuilderGame.cs            ← собирает Game.unity (440 LOC)
-├── SceneBuilderMainMenu.cs        ← собирает MainMenu.unity
-├── SceneBuilderLeaderboard.cs     ← собирает Leaderboard.unity
-├── BuildScript.cs                 ← Build WebGL / Windows
-├── WavWriter.cs                   ← PCM → WAV (16-bit mono)
-└── UiHelpers.cs                   ← фабрики Text/Button
+├── Bootstrap.cs                       ← главный entry: BuildAll
+├── AssetForge.cs                      ← генерация PNG, WAV, ScriptableObject (~425 LOC)
+├── SceneBuilderGame.cs                ← собирает Game.unity (~416 LOC)
+├── SceneBuilderMainMenu.cs            ← собирает MainMenu.unity
+├── SceneBuilderLeaderboard.cs         ← собирает Leaderboard.unity
+├── BuildScript.cs                     ← Build WebGL / Windows (~122 LOC)
+├── WavWriter.cs                       ← PCM → WAV (16-bit mono)
+├── UiHelpers.cs                       ← фабрики Text/Button
+└── GeneratedTexturePostprocessor.cs   ← PPU=128 для Art/Generated
 ```
 
 **Что конкретно делает эта папка:**
@@ -171,9 +173,9 @@ Assets/_Project/Scripts/Editor/
 - `SceneBuilderGame/MainMenu/Leaderboard.cs` — создают три `.unity`-сцены: камера, EventSystem, Canvas с панелями HUD/GameOver/NameInput, кнопки меню, привязки `onClick`.
 - `Bootstrap.cs` — оркестрирует AssetForge + три SceneBuilder'а в правильном порядке.
 
-**Если бы открывали Unity Editor вручную, этой папки бы вообще не было:** спрайты рисовались бы в Photoshop, кнопки расставлялись в Canvas мышкой, `onClick` привязывались бы в инспекторе. Все 1585 строк Editor-папки — это замена этих кликов мышкой и работы в графическом редакторе через C#.
+**Если бы открывали Unity Editor вручную, этой папки бы вообще не было:** спрайты рисовались бы в Photoshop, кнопки расставлялись в Canvas мышкой, `onClick` привязывались бы в инспекторе. ~1640 строк Editor-папки — это замена этих кликов мышкой и работы в графическом редакторе через C#.
 
-`BuildScript.cs` (116 строк) был бы нужен в любом случае — это запуск сборки через CLI, заменяет команду `File → Build` в редакторе.
+`BuildScript.cs` (~122 строки) был бы нужен в любом случае — это запуск сборки через CLI, заменяет команду `File → Build` в редакторе.
 
 ### Сцены, конфиги, префабы (генерируются автоматически)
 
@@ -336,8 +338,19 @@ UNITY="/Applications/Unity/Hub/Editor/6000.3.15f1/Unity.app/Contents/MacOS/Unity
 
 ## Что можно улучшить
 
-- **Глобальный лидерборд через Upstash Redis** — все игроки в одной таблице. Локальный кэш отсутствует: при оффлайне таблица показывает «нет связи». Если игра уйдёт в продакшен на ненадёжных сетях, добавим fallback на `PlayerPrefs`-кэш последнего ответа.
+- **Оффлайн-кэш лидерборда:** сейчас при оффлайне таблица показывает «нет связи». Если игра пойдёт в продакшен на ненадёжных сетях, нужен fallback на `PlayerPrefs`-кэш последнего ответа.
 - **`Instantiate` / `Destroy` мишеней каждый кадр-другой** — для коротких раундов (<50 мишеней) Object Pool оверкилл, но при mass-spawn имеет смысл `UnityEngine.Pool`.
 - **Tween-эффекты на корутинах** (`PopIn`, `Shake`) — для большого числа эффектов лучше DOTween/PrimeTween (zero-alloc, не падают при `Destroy`).
 - **Спрайты — плейсхолдеры из примитивов.** Замена на CC0-ассеты (kenney.nl) — без правок кода, см. блок «Спрайты и звуки».
 - **Legacy UGUI `Text`** вместо TextMeshPro — сознательный размен для batch-mode; для типографики стоит подключить TMP через `AssetDatabase.ImportPackage`.
+
+---
+
+## Рефакторинг на будущее
+
+Что осталось «как есть» при подготовке к ревью — не блокирует функциональность, но требует отдельной итерации:
+
+- **Дубликаты с платформером (~1300 LOC).** `api/_redis.js`, `leaderboard-*.js`, `Core/LeaderboardClient.cs`, `Core/PlayerIdentity.cs`, `UI/NameInputDialog.cs`, `UI/LeaderboardView.cs`, `UI/HUD.cs`, `UI/PauseController.cs`, `UI/MenuController.cs` отличаются между шутером и платформером только префиксом ключей Redis/PlayerPrefs и парой строк. Самый аккуратный путь — вынести в общий модуль (UPM-пакет в `Packages/com.silkin.shared/` или симлинки на корневой `_shared/`). Не сделано в этой итерации: миграция двух Unity-проектов на общий пакет требует отдельной проверки, что асемблии и meta-файлы переживут переход.
+- **`isNewRecord` ложное срабатывание.** В `api/leaderboard-save-score.js` поле возвращается через `personalBest === score`, поэтому повторная отправка того же рекорда после истечения rate-limit вернёт `true`, хотя `ZADD GT` не обновил запись. Лечится сравнением старого и нового значения через `ZSCORE` до и после `ZADD`.
+- **Нет автотестов на API.** Уникальность ника, rate-limit, повторный submit, граничные score — всё проверялось руками. Минимальный набор Vitest-тестов с моком Upstash REST упростил бы будущие правки серверной логики.
+- **`web/Build/*.unityweb` лежит в git** — раздувает репозиторий и историю коммитов. В новом проекте лучше держать билды вне git и собирать в CI.

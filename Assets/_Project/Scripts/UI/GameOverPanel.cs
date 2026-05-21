@@ -24,8 +24,6 @@ public class GameOverPanel : MonoBehaviour
     [Header("Диалог имени")]
     public NameInputDialog nameDialog;
 
-    int lastScore;
-
     void OnEnable()
     {
         if (root != null) root.SetActive(false);
@@ -49,7 +47,6 @@ public class GameOverPanel : MonoBehaviour
 
     void OnGameOver(int finalScore)
     {
-        lastScore = finalScore;
         if (root != null) root.SetActive(true);
         if (titleText != null) titleText.text = "Время вышло";
         if (finalScoreText != null) finalScoreText.text = $"Счёт: {finalScore}";
@@ -59,16 +56,13 @@ public class GameOverPanel : MonoBehaviour
         //    Если игрок закрыл диалог «Отмена» — счёт не отправляется.
         if (!PlayerIdentity.HasName())
         {
-            if (nameDialog != null)
-                nameDialog.OpenForFirstTime(
-                    onSuccess: _ => SubmitScore(finalScore),
-                    onCancel: () =>
-                    {
-                        if (recordText != null)
-                            recordText.text = "Счёт не сохранён";
-                    });
-            else
-                SubmitScore(finalScore);    // диалога нет — шлём без имени
+            nameDialog.OpenForFirstTime(
+                onSuccess: _ => SubmitScore(finalScore),
+                onCancel: () =>
+                {
+                    if (recordText != null)
+                        recordText.text = "Счёт не сохранён";
+                });
         }
         else
         {

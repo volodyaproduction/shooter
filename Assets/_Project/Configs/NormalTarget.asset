@@ -19,5 +19,5 @@ MonoBehaviour:
   scale: 1
   basePoints: 10
   isTrap: 0
-  hitEffectPrefab: {fileID: 8362632299987970063, guid: e0c8a398e384946fb805c7fab9194679, type: 3}
+  hitEffectPrefab: {fileID: 1260985114095043271, guid: e0c8a398e384946fb805c7fab9194679, type: 3}
   hitClip: {fileID: 8300000, guid: d1d2994122d0942cbadde85c875f7e13, type: 3}

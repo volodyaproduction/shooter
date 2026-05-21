@@ -125,8 +125,11 @@ public class LeaderboardView : MonoBehaviour
 
     void AddMedal(Transform parent, int rank, Color? color)
     {
-        // Контейнер-кружок с номером внутри
-        var go = new GameObject($"Rank_{rank}");
+        // Контейнер с фиксированной шириной в layout-группе.
+        // Image и Text оба наследуют Graphic, а Unity допускает только один
+        // Graphic на GameObject — поэтому фон-кружок и текст лежат на разных
+        // GO: внешний — для layout и фона, внутренний дочерний — для цифры.
+        var go = new GameObject($"Rank_{rank}", typeof(RectTransform));
         go.transform.SetParent(parent, false);
 
         var le = go.AddComponent<LayoutElement>();
@@ -137,10 +140,18 @@ public class LeaderboardView : MonoBehaviour
         {
             var img = go.AddComponent<Image>();
             img.color = color.Value;
-            // делаем «таблетку» по центру
         }
 
-        var t = go.AddComponent<Text>();
+        // Дочерний GO с текстом, растянут на родителя
+        var labelGO = new GameObject("Label", typeof(RectTransform));
+        labelGO.transform.SetParent(go.transform, false);
+        var labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.anchorMin = Vector2.zero;
+        labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = Vector2.zero;
+        labelRT.offsetMax = Vector2.zero;
+
+        var t = labelGO.AddComponent<Text>();
         t.text = rank.ToString();
         t.font = font;
         t.fontSize = 38;

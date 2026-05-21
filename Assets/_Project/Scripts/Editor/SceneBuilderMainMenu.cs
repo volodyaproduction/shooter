@@ -15,6 +15,14 @@ public static class SceneBuilderMainMenu
 {
     public const string ScenePath = "Assets/_Project/Scenes/MainMenu.unity";
 
+    // Общая «макарон»-палитра кнопок главного меню. Те же цвета используются
+    // в платформере — игры выглядят как одна семья при разных фонах.
+    static readonly Color ColorStart      = new Color(0.659f, 0.835f, 0.729f); // #A8D5BA шалфей
+    static readonly Color ColorNickname   = new Color(0.706f, 0.804f, 0.929f); // #B4CDED лавандовый
+    static readonly Color ColorLeaderboard= new Color(0.957f, 0.867f, 0.643f); // #F4DDA4 ванильный
+    static readonly Color ColorNeutral    = new Color(0.55f, 0.55f, 0.60f);    // запасной нейтральный
+    static readonly Color ColorDanger     = new Color(0.85f, 0.55f, 0.55f);    // Выход (вне WebGL)
+
     public static void Build()
     {
         // 1. Пустая сцена
@@ -59,7 +67,7 @@ public static class SceneBuilderMainMenu
         UiHelpers.StretchFull(menuRoot.GetComponent<RectTransform>());
         var menu = menuRoot.AddComponent<MenuController>();
 
-        // 6. Заголовок
+        // 6. Заголовок — отступ от верха согласован с платформером
         UiHelpers.Text(
             parent: canvasGO.transform,
             name: "Title",
@@ -67,12 +75,14 @@ public static class SceneBuilderMainMenu
             fontSize: 110,
             anchor: new Vector2(0.5f, 1f),
             pivot: new Vector2(0.5f, 1f),
-            anchoredPos: new Vector2(0, -80),
+            anchoredPos: new Vector2(0, -100),
             size: new Vector2(1400, 180),
             alignment: TextAnchor.MiddleCenter,
             text: "Кликер-шутер");
 
-        // 7. Главная панель
+        // 7. Главная панель. Кнопки разной ширины — иерархия по визуальной
+        // важности: Старт средний, Никнейм широкий (под Telegram-ники),
+        // Лидерборд узкий.
         var mainPanel = CreatePanel(menuRoot.transform, "MainPanel");
         menu.mainPanel = mainPanel;
 
@@ -81,18 +91,18 @@ public static class SceneBuilderMainMenu
             name: "StartButton",
             font: font,
             label: "Старт",
-            color: new Color(0.25f, 0.65f, 0.95f),
-            anchoredPos: new Vector2(0, 80),
-            size: new Vector2(440, 110));
+            color: ColorStart,
+            anchoredPos: new Vector2(0, 130),
+            size: new Vector2(520, 110));
 
         menu.nameButton = UiHelpers.Button(
             parent: mainPanel.transform,
             name: "NameButton",
             font: font,
-            label: "Имя: не задано",
-            color: new Color(0.5f, 0.5f, 0.6f),
-            anchoredPos: new Vector2(0, -50),
-            size: new Vector2(440, 100));
+            label: "Указать никнейм",
+            color: ColorNickname,
+            anchoredPos: new Vector2(0, 0),
+            size: new Vector2(680, 100));
         menu.nameButtonLabel = menu.nameButton.GetComponentInChildren<Text>();
 
         menu.leaderboardButton = UiHelpers.Button(
@@ -100,18 +110,20 @@ public static class SceneBuilderMainMenu
             name: "LeaderboardButton",
             font: font,
             label: "Лидерборд",
-            color: new Color(0.5f, 0.5f, 0.6f),
-            anchoredPos: new Vector2(0, -170),
-            size: new Vector2(440, 100));
+            color: ColorLeaderboard,
+            anchoredPos: new Vector2(0, -130),
+            size: new Vector2(420, 90));
 
+        // Выход скрыт в WebGL через MenuController; на десктоп-сборке висит
+        // ниже остальных, нейтральный «опасный» цвет.
         menu.exitButton = UiHelpers.Button(
             parent: mainPanel.transform,
             name: "ExitButton",
             font: font,
             label: "Выход",
-            color: new Color(0.55f, 0.35f, 0.35f),
-            anchoredPos: new Vector2(0, -290),
-            size: new Vector2(440, 100));
+            color: ColorDanger,
+            anchoredPos: new Vector2(0, -260),
+            size: new Vector2(420, 80));
 
         // 8. NameInputDialog (используется для смены имени из меню)
         var dialog = CreateNameInputDialog(canvasGO.transform, font);
@@ -215,7 +227,7 @@ public static class SceneBuilderMainMenu
             name: "SubmitButton",
             font: font,
             label: "OK",
-            color: new Color(0.25f, 0.65f, 0.95f),
+            color: ColorStart,                       // OK = действие → шалфей
             anchoredPos: new Vector2(0, -220),
             size: new Vector2(360, 100));
 

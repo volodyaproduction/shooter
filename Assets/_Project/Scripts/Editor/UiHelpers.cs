@@ -75,6 +75,14 @@ public static class UiHelpers
         text.fontSize = 44;
         text.color = Color.white;
         text.alignment = TextAnchor.MiddleCenter;
+
+        // Тёмная обводка нужна на светлых пастелях (палитра кнопок главного
+        // меню) — без неё белый текст плохо читается. На исторически тёмных
+        // кнопках обводка не мешает.
+        var outline = textGO.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.6f);
+        outline.effectDistance = new Vector2(2, -2);
+
         var textRT = textGO.GetComponent<RectTransform>();
         textRT.anchorMin = Vector2.zero;
         textRT.anchorMax = Vector2.one;

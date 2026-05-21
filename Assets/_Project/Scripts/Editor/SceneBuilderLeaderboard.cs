@@ -88,7 +88,7 @@ public static class SceneBuilderLeaderboard
 
     static void BuildScrollRect(GameObject canvasGO, LeaderboardView view)
     {
-        // 1. Внешняя рамка ScrollRect — растянута на центральной части экрана
+        // 1. Внешняя рамка ScrollRect — фон + позиция/размер по центру
         var scrollGO = new GameObject("Scroll", typeof(RectTransform));
         scrollGO.transform.SetParent(canvasGO.transform, false);
         var scrollRT = scrollGO.GetComponent<RectTransform>();
@@ -97,26 +97,21 @@ public static class SceneBuilderLeaderboard
         scrollRT.pivot = new Vector2(0.5f, 0.5f);
         scrollRT.anchoredPosition = new Vector2(0, 30);
         scrollRT.sizeDelta = new Vector2(1200, 700);
-
-        var scrollBg = scrollGO.AddComponent<Image>();
-        scrollBg.color = new Color(0f, 0f, 0f, 0.25f);
+        scrollGO.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.35f);
 
         var scrollRect = scrollGO.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.vertical = true;
         scrollRect.movementType = ScrollRect.MovementType.Clamped;
-        // Маска чтобы строки не вылезали за рамку — Mask + Image на той же GO
-        var mask = scrollGO.AddComponent<Mask>();
-        mask.showMaskGraphic = true;
+        scrollRect.scrollSensitivity = 30f;
 
-        // 2. Viewport — обязательный компонент Scroll Rect
+        // 2. Viewport с RectMask2D — режет строки по границе, не требует
+        //    Image-маски и не конфликтует с фоновым Image на ScrollGO
         var viewportGO = new GameObject("Viewport", typeof(RectTransform));
         viewportGO.transform.SetParent(scrollGO.transform, false);
         var viewportRT = viewportGO.GetComponent<RectTransform>();
         UiHelpers.StretchFull(viewportRT);
-        viewportGO.AddComponent<Image>().color =
-            new Color(1f, 1f, 1f, 0.001f);  // прозрачная заглушка для Mask
-        viewportGO.AddComponent<Mask>().showMaskGraphic = false;
+        viewportGO.AddComponent<RectMask2D>();
         scrollRect.viewport = viewportRT;
 
         // 3. Content — куда LeaderboardView вставляет строки
@@ -127,7 +122,7 @@ public static class SceneBuilderLeaderboard
         contentRT.anchorMax = new Vector2(1, 1);
         contentRT.pivot = new Vector2(0.5f, 1);
         contentRT.anchoredPosition = Vector2.zero;
-        contentRT.sizeDelta = new Vector2(0, 0);
+        contentRT.sizeDelta = new Vector2(0, 10);
 
         var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 6;
@@ -145,7 +140,8 @@ public static class SceneBuilderLeaderboard
         scrollRect.content = contentRT;
         view.content = contentRT;
 
-        // 4. Текст статуса/загрузки поверх скролла
+        // 4. Текст статуса/загрузки. Кладём ПОСЛЕ скролла, чтобы был поверх,
+        //    и держим рядом с центром скролла (anchoredPos.y = 30).
         view.statusText = UiHelpers.Text(
             parent: canvasGO.transform,
             name: "StatusText",
@@ -154,7 +150,7 @@ public static class SceneBuilderLeaderboard
             anchor: new Vector2(0.5f, 0.5f),
             pivot: new Vector2(0.5f, 0.5f),
             anchoredPos: new Vector2(0, 30),
-            size: new Vector2(900, 80),
+            size: new Vector2(1100, 80),
             alignment: TextAnchor.MiddleCenter,
             text: "Загрузка...");
     }

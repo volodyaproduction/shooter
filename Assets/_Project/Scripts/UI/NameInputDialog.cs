@@ -25,11 +25,9 @@ public class NameInputDialog : MonoBehaviour
 
     Action<string> onSuccess;
 
-    const string HintFirstTime =
-        "Укажи свой никнейм. Будет прикольно, если это ник из Telegram — " +
-        "поставь @ впереди, и из лидерборда к тебе смогут постучаться.";
-    const string HintChange =
-        "Сменить имя. С @ впереди оно станет ссылкой t.me/...";
+    const string Hint =
+        "Поставь @ впереди — твой ник станет ссылкой на Telegram, " +
+        "и из лидерборда к тебе смогут постучаться.";
 
     void OnEnable()
     {
@@ -45,20 +43,20 @@ public class NameInputDialog : MonoBehaviour
 
     public void OpenForFirstTime(Action<string> callback)
     {
-        Open(hint: HintFirstTime, initialName: string.Empty, callback);
+        Open(initialName: string.Empty, callback);
     }
 
     public void OpenForChange(Action<string> callback)
     {
-        Open(hint: HintChange, initialName: PlayerIdentity.GetName(), callback);
+        Open(initialName: PlayerIdentity.GetName(), callback);
     }
 
-    void Open(string hint, string initialName, Action<string> callback)
+    void Open(string initialName, Action<string> callback)
     {
         onSuccess = callback;
         if (root != null) root.SetActive(true);
         if (nameField != null) nameField.text = initialName ?? string.Empty;
-        if (hintText != null) hintText.text = hint;
+        if (hintText != null) hintText.text = Hint;
         if (errorText != null) errorText.text = string.Empty;
         SetInteractable(true);
     }

@@ -182,12 +182,12 @@ public static class SceneBuilderMainMenu
             parent: box.transform,
             name: "Hint",
             font: font,
-            fontSize: 26,
+            fontSize: 30,
             anchor: new Vector2(0.5f, 0.5f),
             pivot: new Vector2(0.5f, 0.5f),
             anchoredPos: new Vector2(0, 120),
-            size: new Vector2(900, 140),
-            alignment: TextAnchor.MiddleCenter,
+            size: new Vector2(900, 160),
+            alignment: TextAnchor.UpperCenter,
             text: string.Empty);
         dialog.hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
 

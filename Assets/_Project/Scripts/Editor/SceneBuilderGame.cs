@@ -123,14 +123,8 @@ public static class SceneBuilderGame
         session.winClip = AssetDatabase.LoadAssetAtPath<AudioClip>(
             AssetForge.WinClipPath);
 
-        var easyDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
-            AssetForge.DifficultyEasyPath);
-        var normalDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
+        session.difficulty = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
             AssetForge.DifficultyNormalPath);
-        var hardDiff = AssetDatabase.LoadAssetAtPath<DifficultyConfig>(
-            AssetForge.DifficultyHardPath);
-        session.difficulty = normalDiff;
-        session.availableDifficulties = new[] { easyDiff, normalDiff, hardDiff };
 
         EditorUtility.SetDirty(session);
         return session;
@@ -222,9 +216,10 @@ public static class SceneBuilderGame
 
         EditorUtility.SetDirty(hud);
 
-        // 2. GameOverPanel + NameInputDialog
+        // 2. GameOverPanel + NameInputDialog (общая фабрика из MainMenu)
         var panel = CreateGameOverPanel(canvasGO.transform, font);
-        var dialog = CreateNameInputDialog(canvasGO.transform, font);
+        var dialog = SceneBuilderMainMenu.CreateNameInputDialog(
+            canvasGO.transform, font);
         panel.nameDialog = dialog;
         EditorUtility.SetDirty(panel);
 
@@ -312,121 +307,6 @@ public static class SceneBuilderGame
         return ctrl;
     }
 
-    static NameInputDialog CreateNameInputDialog(Transform canvasTr, Font font)
-    {
-        var go = new GameObject("NameInputDialog", typeof(RectTransform));
-        go.transform.SetParent(canvasTr, false);
-        UiHelpers.StretchFull(go.GetComponent<RectTransform>());
-        var dialog = go.AddComponent<NameInputDialog>();
-
-        // 1. Root — затемнение во весь экран
-        var rootGO = new GameObject("Root");
-        rootGO.transform.SetParent(go.transform, false);
-        var rootImg = rootGO.AddComponent<Image>();
-        rootImg.color = new Color(0, 0, 0, 0.6f);
-        UiHelpers.StretchFull(rootGO.GetComponent<RectTransform>());
-        rootGO.SetActive(false);   // не показываем диалог при старте
-        dialog.root = rootGO;
-
-        // 2. Прямоугольник диалога
-        var box = new GameObject("Box");
-        box.transform.SetParent(rootGO.transform, false);
-        var boxImg = box.AddComponent<Image>();
-        boxImg.color = new Color(0.18f, 0.22f, 0.30f, 1f);
-        var boxRT = box.GetComponent<RectTransform>();
-        boxRT.anchorMin = new Vector2(0.5f, 0.5f);
-        boxRT.anchorMax = new Vector2(0.5f, 0.5f);
-        boxRT.pivot = new Vector2(0.5f, 0.5f);
-        boxRT.anchoredPosition = Vector2.zero;
-        boxRT.sizeDelta = new Vector2(800, 460);
-
-        // 3. Заголовок
-        UiHelpers.Text(
-            parent: box.transform,
-            name: "Title",
-            font: font,
-            fontSize: 56,
-            anchor: new Vector2(0.5f, 0.5f),
-            pivot: new Vector2(0.5f, 0.5f),
-            anchoredPos: new Vector2(0, 150),
-            size: new Vector2(700, 80),
-            alignment: TextAnchor.MiddleCenter,
-            text: "Введите имя");
-
-        // 4. InputField
-        dialog.nameField = CreateInputField(
-            parent: box.transform,
-            font: font,
-            anchoredPos: new Vector2(0, 20),
-            size: new Vector2(620, 90));
-
-        // 5. Кнопка OK
-        dialog.submitButton = UiHelpers.Button(
-            parent: box.transform,
-            name: "SubmitButton",
-            font: font,
-            label: "OK",
-            color: new Color(0.25f, 0.65f, 0.95f),
-            anchoredPos: new Vector2(0, -130),
-            size: new Vector2(320, 100));
-
-        EditorUtility.SetDirty(dialog);
-        return dialog;
-    }
-
-    static InputField CreateInputField(Transform parent, Font font,
-        Vector2 anchoredPos, Vector2 size)
-    {
-        var go = new GameObject("NameField");
-        go.transform.SetParent(parent, false);
-        var img = go.AddComponent<Image>();
-        img.color = new Color(1f, 1f, 1f, 0.95f);
-
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = size;
-
-        // Внутренний текст для ввода
-        var textGO = new GameObject("Text");
-        textGO.transform.SetParent(go.transform, false);
-        var text = textGO.AddComponent<Text>();
-        text.font = font;
-        text.fontSize = 44;
-        text.color = Color.black;
-        text.alignment = TextAnchor.MiddleLeft;
-        text.supportRichText = false;
-        var textRT = textGO.GetComponent<RectTransform>();
-        textRT.anchorMin = Vector2.zero;
-        textRT.anchorMax = Vector2.one;
-        textRT.offsetMin = new Vector2(20, 5);
-        textRT.offsetMax = new Vector2(-20, -5);
-
-        // Placeholder
-        var phGO = new GameObject("Placeholder");
-        phGO.transform.SetParent(go.transform, false);
-        var ph = phGO.AddComponent<Text>();
-        ph.font = font;
-        ph.fontSize = 44;
-        ph.color = new Color(0.5f, 0.5f, 0.5f);
-        ph.alignment = TextAnchor.MiddleLeft;
-        ph.text = "Игрок";
-        var phRT = phGO.GetComponent<RectTransform>();
-        phRT.anchorMin = Vector2.zero;
-        phRT.anchorMax = Vector2.one;
-        phRT.offsetMin = new Vector2(20, 5);
-        phRT.offsetMax = new Vector2(-20, -5);
-
-        var input = go.AddComponent<InputField>();
-        input.textComponent = text;
-        input.placeholder = ph;
-        input.characterLimit = 12;
-        input.contentType = InputField.ContentType.Standard;
-        return input;
-    }
-
     static GameOverPanel CreateGameOverPanel(Transform canvasTr, Font font)
     {
         var panelGO = new GameObject("GameOverPanel", typeof(RectTransform));
@@ -465,12 +345,25 @@ public static class SceneBuilderGame
             fontSize: 64,
             anchor: new Vector2(0.5f, 0.5f),
             pivot: new Vector2(0.5f, 0.5f),
-            anchoredPos: new Vector2(0, 30),
+            anchoredPos: new Vector2(0, 60),
             size: new Vector2(800, 100),
             alignment: TextAnchor.MiddleCenter,
-            text: "Итог: 0");
+            text: "Счёт: 0");
 
-        // 4. Кнопка Заново
+        // 4. Подпись с личным рекордом (получаем с сервера после сабмита)
+        go.recordText = UiHelpers.Text(
+            parent: rootGO.transform,
+            name: "RecordText",
+            font: font,
+            fontSize: 42,
+            anchor: new Vector2(0.5f, 0.5f),
+            pivot: new Vector2(0.5f, 0.5f),
+            anchoredPos: new Vector2(0, -10),
+            size: new Vector2(900, 70),
+            alignment: TextAnchor.MiddleCenter,
+            text: "...");
+
+        // 5. Кнопка Заново
         go.restartButton = UiHelpers.Button(
             parent: rootGO.transform,
             name: "RestartButton",

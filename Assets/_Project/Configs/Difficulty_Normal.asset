@@ -15,10 +15,10 @@ MonoBehaviour:
   id: normal
   displayName: "\u041D\u043E\u0440\u043C\u0430\u043B\u044C\u043D\u043E"
   roundDuration: 30
-  spawnIntervalMin: 0.55
-  spawnIntervalMax: 1.1
-  targetLifetime: 1.8
-  trapChance: 0.15
-  spawnAreaPadding: {x: 1.2, y: 1.2}
-  fastReactionBonus: 2
-  fastReactionWindow: 0.8
+  spawnIntervalMin: 0.45
+  spawnIntervalMax: 0.85
+  targetLifetime: 1.5
+  trapChance: 0.2
+  spawnAreaPadding: {x: 1.1, y: 1.1}
+  fastReactionBonus: 2.2
+  fastReactionWindow: 0.7

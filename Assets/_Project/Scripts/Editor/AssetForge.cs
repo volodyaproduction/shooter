@@ -32,12 +32,8 @@ public static class AssetForge
         ConfigsDir + "/NormalTarget.asset";
     public const string TrapConfigPath =
         ConfigsDir + "/TrapTarget.asset";
-    public const string DifficultyEasyPath =
-        ConfigsDir + "/Difficulty_Easy.asset";
     public const string DifficultyNormalPath =
         ConfigsDir + "/Difficulty_Normal.asset";
-    public const string DifficultyHardPath =
-        ConfigsDir + "/Difficulty_Hard.asset";
 
     public const string TargetPrefabPath = PrefabsDir + "/Target.prefab";
     public const string HitEffectPrefabPath = VfxDir + "/HitEffect.prefab";
@@ -89,9 +85,7 @@ public static class AssetForge
         // 3. ScriptableObject-конфиги
         var normalConfig = ForgeNormalTargetConfig();
         var trapConfig = ForgeTrapTargetConfig();
-        ForgeEasyDifficulty();
         ForgeNormalDifficulty();
-        ForgeHardDifficulty();
 
         // 4. Префабы (мишень, эффекты)
         var hitFx = ForgeHitEffectPrefab();
@@ -143,53 +137,21 @@ public static class AssetForge
         return cfg;
     }
 
-    static DifficultyConfig ForgeEasyDifficulty()
-    {
-        var cfg = LoadOrCreate<DifficultyConfig>(DifficultyEasyPath);
-        cfg.id = "easy";
-        cfg.displayName = "Легко";
-        cfg.roundDuration = 30f;
-        cfg.spawnIntervalMin = 0.9f;
-        cfg.spawnIntervalMax = 1.6f;
-        cfg.targetLifetime = 2.5f;
-        cfg.trapChance = 0f;
-        cfg.spawnAreaPadding = new Vector2(1.4f, 1.4f);
-        cfg.fastReactionBonus = 1.5f;
-        cfg.fastReactionWindow = 1.0f;
-        EditorUtility.SetDirty(cfg);
-        return cfg;
-    }
-
     static DifficultyConfig ForgeNormalDifficulty()
     {
+        // Единственный пресет — между прежними Normal и Hard: плотный спавн,
+        // короткие тайминги, ловушки 20%. Подобран на ощущениях «весело-плотно».
         var cfg = LoadOrCreate<DifficultyConfig>(DifficultyNormalPath);
         cfg.id = "normal";
         cfg.displayName = "Нормально";
         cfg.roundDuration = 30f;
-        cfg.spawnIntervalMin = 0.55f;
-        cfg.spawnIntervalMax = 1.1f;
-        cfg.targetLifetime = 1.8f;
-        cfg.trapChance = 0.15f;
-        cfg.spawnAreaPadding = new Vector2(1.2f, 1.2f);
-        cfg.fastReactionBonus = 2.0f;
-        cfg.fastReactionWindow = 0.8f;
-        EditorUtility.SetDirty(cfg);
-        return cfg;
-    }
-
-    static DifficultyConfig ForgeHardDifficulty()
-    {
-        var cfg = LoadOrCreate<DifficultyConfig>(DifficultyHardPath);
-        cfg.id = "hard";
-        cfg.displayName = "Сложно";
-        cfg.roundDuration = 30f;
-        cfg.spawnIntervalMin = 0.35f;
-        cfg.spawnIntervalMax = 0.7f;
-        cfg.targetLifetime = 1.2f;
-        cfg.trapChance = 0.25f;
-        cfg.spawnAreaPadding = new Vector2(1f, 1f);
-        cfg.fastReactionBonus = 2.5f;
-        cfg.fastReactionWindow = 0.55f;
+        cfg.spawnIntervalMin = 0.45f;
+        cfg.spawnIntervalMax = 0.85f;
+        cfg.targetLifetime = 1.5f;
+        cfg.trapChance = 0.20f;
+        cfg.spawnAreaPadding = new Vector2(1.1f, 1.1f);
+        cfg.fastReactionBonus = 2.2f;
+        cfg.fastReactionWindow = 0.7f;
         EditorUtility.SetDirty(cfg);
         return cfg;
     }

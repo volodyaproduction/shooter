@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// Сборка сцены Leaderboard.unity: топ-5 (rank/name/score) + кнопка Назад.
-// Сцена попадает в BuildSettings последней, после Game.
+// Сборка сцены Leaderboard.unity: ScrollRect с вертикальным списком всех
+// игроков, медали для топ-3, кнопка Назад. Сам список собирается во время
+// исполнения LeaderboardView.cs из ответа /api/leaderboard-top.
 public static class SceneBuilderLeaderboard
 {
     public const string ScenePath = "Assets/_Project/Scenes/Leaderboard.unity";
@@ -51,126 +52,111 @@ public static class SceneBuilderLeaderboard
             parent: canvasGO.transform,
             name: "Title",
             font: font,
-            fontSize: 110,
+            fontSize: 100,
             anchor: new Vector2(0.5f, 1f),
             pivot: new Vector2(0.5f, 1f),
-            anchoredPos: new Vector2(0, -50),
-            size: new Vector2(900, 160),
+            anchoredPos: new Vector2(0, -40),
+            size: new Vector2(900, 140),
             alignment: TextAnchor.MiddleCenter,
             text: "Лидерборд");
 
-        // 6. Контейнер с LeaderboardView и пятью строками
-        var viewGO = new GameObject("LeaderboardView", typeof(RectTransform));
-        viewGO.transform.SetParent(canvasGO.transform, false);
-        UiHelpers.StretchFull(viewGO.GetComponent<RectTransform>());
-        var view = viewGO.AddComponent<LeaderboardView>();
-        view.rankTexts = new Text[LeaderboardSaveSystem.TopSize];
-        view.nameTexts = new Text[LeaderboardSaveSystem.TopSize];
-        view.scoreTexts = new Text[LeaderboardSaveSystem.TopSize];
+        // 6. ScrollRect-контейнер
+        var view = canvasGO.AddComponent<LeaderboardView>();
+        view.font = font;
+        BuildScrollRect(canvasGO, view);
 
-        // 7. Шапка таблицы
-        UiHelpers.Text(
-            parent: canvasGO.transform,
-            name: "HeaderRank",
-            font: font,
-            fontSize: 36,
-            anchor: new Vector2(0.5f, 0.5f),
-            pivot: new Vector2(0.5f, 0.5f),
-            anchoredPos: new Vector2(-340, 280),
-            size: new Vector2(120, 50),
-            alignment: TextAnchor.MiddleCenter,
-            text: "#");
-        UiHelpers.Text(
-            parent: canvasGO.transform,
-            name: "HeaderName",
-            font: font,
-            fontSize: 36,
-            anchor: new Vector2(0.5f, 0.5f),
-            pivot: new Vector2(0.5f, 0.5f),
-            anchoredPos: new Vector2(-50, 280),
-            size: new Vector2(420, 50),
-            alignment: TextAnchor.MiddleLeft,
-            text: "Имя");
-        UiHelpers.Text(
-            parent: canvasGO.transform,
-            name: "HeaderScore",
-            font: font,
-            fontSize: 36,
-            anchor: new Vector2(0.5f, 0.5f),
-            pivot: new Vector2(0.5f, 0.5f),
-            anchoredPos: new Vector2(320, 280),
-            size: new Vector2(220, 50),
-            alignment: TextAnchor.MiddleRight,
-            text: "Очки");
-
-        // 8. Строки (rank/name/score)
-        float startY = 200f;
-        float rowH = 70f;
-        for (int i = 0; i < LeaderboardSaveSystem.TopSize; i++)
-        {
-            float y = startY - i * rowH;
-            view.rankTexts[i] = UiHelpers.Text(
-                parent: canvasGO.transform,
-                name: $"Row{i}_Rank",
-                font: font,
-                fontSize: 48,
-                anchor: new Vector2(0.5f, 0.5f),
-                pivot: new Vector2(0.5f, 0.5f),
-                anchoredPos: new Vector2(-340, y),
-                size: new Vector2(120, 60),
-                alignment: TextAnchor.MiddleCenter,
-                text: (i + 1) + ".");
-            view.nameTexts[i] = UiHelpers.Text(
-                parent: canvasGO.transform,
-                name: $"Row{i}_Name",
-                font: font,
-                fontSize: 48,
-                anchor: new Vector2(0.5f, 0.5f),
-                pivot: new Vector2(0.5f, 0.5f),
-                anchoredPos: new Vector2(-50, y),
-                size: new Vector2(420, 60),
-                alignment: TextAnchor.MiddleLeft,
-                text: "—");
-            view.scoreTexts[i] = UiHelpers.Text(
-                parent: canvasGO.transform,
-                name: $"Row{i}_Score",
-                font: font,
-                fontSize: 48,
-                anchor: new Vector2(0.5f, 0.5f),
-                pivot: new Vector2(0.5f, 0.5f),
-                anchoredPos: new Vector2(320, y),
-                size: new Vector2(220, 60),
-                alignment: TextAnchor.MiddleRight,
-                text: "—");
-        }
-
-        // 9. Кнопки внизу: Назад и (опционально) Очистить
+        // 7. Кнопка возврата
         view.backButton = UiHelpers.Button(
             parent: canvasGO.transform,
             name: "BackButton",
             font: font,
             label: "В меню",
             color: new Color(0.25f, 0.65f, 0.95f),
-            anchoredPos: new Vector2(-160, -400),
-            size: new Vector2(320, 100));
-        view.clearButton = UiHelpers.Button(
-            parent: canvasGO.transform,
-            name: "ClearButton",
-            font: font,
-            label: "Очистить",
-            color: new Color(0.55f, 0.35f, 0.35f),
-            anchoredPos: new Vector2(180, -400),
-            size: new Vector2(280, 100));
+            anchoredPos: new Vector2(0, -480),
+            size: new Vector2(360, 100));
 
         EditorUtility.SetDirty(view);
 
-        // 10. Сохраняем сцену и добавляем в BuildSettings
+        // 8. Сохраняем сцену и добавляем в BuildSettings
         EditorSceneManager.MarkSceneDirty(scene);
         EnsureDir(System.IO.Path.GetDirectoryName(ScenePath));
         EditorSceneManager.SaveScene(scene, ScenePath);
         AddScene(ScenePath);
         AssetDatabase.SaveAssets();
         Debug.Log("[SceneBuilderLeaderboard] Сцена сохранена: " + ScenePath);
+    }
+
+    static void BuildScrollRect(GameObject canvasGO, LeaderboardView view)
+    {
+        // 1. Внешняя рамка ScrollRect — растянута на центральной части экрана
+        var scrollGO = new GameObject("Scroll", typeof(RectTransform));
+        scrollGO.transform.SetParent(canvasGO.transform, false);
+        var scrollRT = scrollGO.GetComponent<RectTransform>();
+        scrollRT.anchorMin = new Vector2(0.5f, 0.5f);
+        scrollRT.anchorMax = new Vector2(0.5f, 0.5f);
+        scrollRT.pivot = new Vector2(0.5f, 0.5f);
+        scrollRT.anchoredPosition = new Vector2(0, 30);
+        scrollRT.sizeDelta = new Vector2(1200, 700);
+
+        var scrollBg = scrollGO.AddComponent<Image>();
+        scrollBg.color = new Color(0f, 0f, 0f, 0.25f);
+
+        var scrollRect = scrollGO.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        // Маска чтобы строки не вылезали за рамку — Mask + Image на той же GO
+        var mask = scrollGO.AddComponent<Mask>();
+        mask.showMaskGraphic = true;
+
+        // 2. Viewport — обязательный компонент Scroll Rect
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform));
+        viewportGO.transform.SetParent(scrollGO.transform, false);
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        UiHelpers.StretchFull(viewportRT);
+        viewportGO.AddComponent<Image>().color =
+            new Color(1f, 1f, 1f, 0.001f);  // прозрачная заглушка для Mask
+        viewportGO.AddComponent<Mask>().showMaskGraphic = false;
+        scrollRect.viewport = viewportRT;
+
+        // 3. Content — куда LeaderboardView вставляет строки
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(1, 1);
+        contentRT.pivot = new Vector2(0.5f, 1);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = new Vector2(0, 0);
+
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 6;
+        vlg.padding = new RectOffset(8, 8, 8, 8);
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+
+        var fitter = contentGO.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        scrollRect.content = contentRT;
+        view.content = contentRT;
+
+        // 4. Текст статуса/загрузки поверх скролла
+        view.statusText = UiHelpers.Text(
+            parent: canvasGO.transform,
+            name: "StatusText",
+            font: view.font,
+            fontSize: 36,
+            anchor: new Vector2(0.5f, 0.5f),
+            pivot: new Vector2(0.5f, 0.5f),
+            anchoredPos: new Vector2(0, 30),
+            size: new Vector2(900, 80),
+            alignment: TextAnchor.MiddleCenter,
+            text: "Загрузка...");
     }
 
     static void EnsureDir(string path)

@@ -1,55 +1,216 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Отображение топ-5 на отдельной сцене Leaderboard.
-// 5 фиксированных строк (rank / name / score); если записей меньше — рисуем
-// прочерки. Кнопка Назад возвращает на MainMenu.
+// Просмотр глобального лидерборда: тянет данные с сервера, рендерит строки в
+// ScrollRect, подсвечивает топ-3 цветными «медалями». Если имя игрока
+// начинается с `@` — строка кликабельна и открывает t.me/<nick>.
 public class LeaderboardView : MonoBehaviour
 {
-    [Header("Строки (5 шт.)")]
-    public Text[] rankTexts;
-    public Text[] nameTexts;
-    public Text[] scoreTexts;
-
-    [Header("Навигация")]
+    [Header("Скролл-контейнер")]
+    public RectTransform content;       // содержимое ScrollRect, у него VLG
+    public Text statusText;             // «Загрузка...», «нет связи»
     public Button backButton;
-    public Button clearButton;
+
+    [Header("Шрифт")]
+    public Font font;
+
+    [Header("Цвета медалей (1-3 место)")]
+    public Color goldColor = new Color(1.0f, 0.84f, 0.0f);
+    public Color silverColor = new Color(0.85f, 0.85f, 0.9f);
+    public Color bronzeColor = new Color(0.80f, 0.50f, 0.20f);
 
     void OnEnable()
     {
         if (backButton != null) backButton.onClick.AddListener(Back);
-        if (clearButton != null) clearButton.onClick.AddListener(ClearAndRefresh);
         Refresh();
     }
 
     void OnDisable()
     {
         if (backButton != null) backButton.onClick.RemoveListener(Back);
-        if (clearButton != null) clearButton.onClick.RemoveListener(ClearAndRefresh);
     }
 
     void Refresh()
     {
-        var data = LeaderboardSaveSystem.Load();
-        data.entries.Sort((a, b) => b.score.CompareTo(a.score));
+        ClearRows();
+        if (statusText != null) statusText.text = "Загрузка...";
 
-        for (int i = 0; i < rankTexts.Length; i++)
+        if (LeaderboardClient.Instance == null)
         {
-            var hasEntry = i < data.entries.Count;
-            if (rankTexts[i] != null) rankTexts[i].text = (i + 1) + ".";
-            if (nameTexts[i] != null)
-                nameTexts[i].text = hasEntry ? data.entries[i].name : "—";
-            if (scoreTexts[i] != null)
-                scoreTexts[i].text = hasEntry ? data.entries[i].score.ToString() : "—";
+            if (statusText != null) statusText.text = "Сервер недоступен";
+            return;
+        }
+
+        LeaderboardClient.Instance.GetTop((entries, error) =>
+        {
+            if (error != null)
+            {
+                if (statusText != null) statusText.text = "Нет связи с сервером";
+                return;
+            }
+            if (entries == null || entries.Count == 0)
+            {
+                if (statusText != null) statusText.text =
+                    "Пока пусто. Сыграй первым!";
+                return;
+            }
+            if (statusText != null) statusText.text = string.Empty;
+            RenderEntries(entries);
+        });
+    }
+
+    void ClearRows()
+    {
+        if (content == null) return;
+        for (int i = content.childCount - 1; i >= 0; i--)
+            Destroy(content.GetChild(i).gameObject);
+    }
+
+    void RenderEntries(List<LeaderboardClient.Entry> entries)
+    {
+        // 1. Подсвечиваем своё имя — берём из PlayerIdentity, сравниваем как
+        //    есть. На сервере оно case-sensitive, локально тоже.
+        var myName = PlayerIdentity.GetName();
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            CreateRow(rank: i + 1, name: e.name, score: e.score,
+                isMe: !string.IsNullOrEmpty(myName) && myName == e.name);
         }
     }
 
-    void Back() => SceneManager.LoadScene("MainMenu");
-
-    void ClearAndRefresh()
+    void CreateRow(int rank, string name, int score, bool isMe)
     {
-        LeaderboardSaveSystem.Clear();
-        Refresh();
+        // 2. Каждая строка — горизонтальный layout: [rank] [name] [score].
+        //    Высота фиксирована через LayoutElement, ширина растягивается.
+        var row = new GameObject($"Row_{rank}", typeof(RectTransform));
+        row.transform.SetParent(content, false);
+
+        var bg = row.AddComponent<Image>();
+        bg.color = isMe
+            ? new Color(0.30f, 0.45f, 0.30f, 0.5f)
+            : new Color(1f, 1f, 1f, 0.05f);
+
+        var layout = row.AddComponent<LayoutElement>();
+        layout.minHeight = 80f;
+        layout.preferredHeight = 80f;
+
+        var hg = row.AddComponent<HorizontalLayoutGroup>();
+        hg.childAlignment = TextAnchor.MiddleLeft;
+        hg.padding = new RectOffset(20, 20, 6, 6);
+        hg.spacing = 16;
+        hg.childForceExpandWidth = false;
+        hg.childForceExpandHeight = true;
+
+        // 3. Медаль или номер
+        var rankColor = rank switch
+        {
+            1 => goldColor,
+            2 => silverColor,
+            3 => bronzeColor,
+            _ => (Color?)null,
+        };
+        AddMedal(row.transform, rank, rankColor);
+
+        // 4. Имя — кликабельное, если начинается с @
+        AddNameCell(row.transform, name);
+
+        // 5. Очки — справа, отдельная ячейка
+        AddScoreCell(row.transform, score);
+    }
+
+    void AddMedal(Transform parent, int rank, Color? color)
+    {
+        // Контейнер-кружок с номером внутри
+        var go = new GameObject($"Rank_{rank}");
+        go.transform.SetParent(parent, false);
+
+        var le = go.AddComponent<LayoutElement>();
+        le.minWidth = 70;
+        le.preferredWidth = 70;
+
+        if (color.HasValue)
+        {
+            var img = go.AddComponent<Image>();
+            img.color = color.Value;
+            // делаем «таблетку» по центру
+        }
+
+        var t = go.AddComponent<Text>();
+        t.text = rank.ToString();
+        t.font = font;
+        t.fontSize = 38;
+        t.alignment = TextAnchor.MiddleCenter;
+        t.color = color.HasValue ? new Color(0.1f, 0.1f, 0.1f) : Color.white;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+    }
+
+    void AddNameCell(Transform parent, string name)
+    {
+        var go = new GameObject("Name");
+        go.transform.SetParent(parent, false);
+
+        var le = go.AddComponent<LayoutElement>();
+        le.flexibleWidth = 1;
+        le.preferredWidth = 600;
+
+        var t = go.AddComponent<Text>();
+        t.text = name ?? string.Empty;
+        t.font = font;
+        t.fontSize = 40;
+        t.alignment = TextAnchor.MiddleLeft;
+        t.color = Color.white;
+        t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+
+        // Имя с @ → подкрашиваем как ссылку и делаем кликабельной.
+        // Text сам по себе raycast target, поэтому IPointerClickHandler
+        // получит событие через GraphicRaycaster без дополнительной графики.
+        if (!string.IsNullOrEmpty(name) && name.StartsWith("@") && name.Length > 1)
+        {
+            t.color = new Color(0.5f, 0.8f, 1f);
+            t.raycastTarget = true;
+            var btn = go.AddComponent<TelegramLinkClick>();
+            btn.telegramName = name.Substring(1);
+        }
+    }
+
+    void AddScoreCell(Transform parent, int score)
+    {
+        var go = new GameObject("Score");
+        go.transform.SetParent(parent, false);
+
+        var le = go.AddComponent<LayoutElement>();
+        le.minWidth = 200;
+        le.preferredWidth = 200;
+
+        var t = go.AddComponent<Text>();
+        t.text = score.ToString();
+        t.font = font;
+        t.fontSize = 40;
+        t.alignment = TextAnchor.MiddleRight;
+        t.color = Color.white;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+    }
+
+    void Back() => SceneManager.LoadScene("MainMenu");
+}
+
+// Клик по имени с @ → открыть t.me/<nick>. Сам по себе Text является
+// Graphic с raycastTarget=true, поэтому отдельная raycast-цель не нужна.
+public class TelegramLinkClick : MonoBehaviour, IPointerClickHandler
+{
+    public string telegramName;
+
+    public void OnPointerClick(PointerEventData _)
+    {
+        if (string.IsNullOrEmpty(telegramName)) return;
+        Application.OpenURL("https://t.me/" + telegramName);
     }
 }

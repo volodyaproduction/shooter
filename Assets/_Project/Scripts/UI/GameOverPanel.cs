@@ -2,21 +2,29 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Панель конца раунда: появляется по событию GameOver, показывает итог,
-// предлагает рестарт и (если есть сцена MainMenu в Build Settings) — выход в меню.
-// Сохранение в лидерборд (Шаг 2) делает LeaderboardSubmitter — здесь только UI.
+// Панель конца раунда. Логика отправки счёта:
+//
+//   1. Раунд закончен → подписываемся на GameSession.GameOver.
+//   2. Если у игрока нет имени — открываем NameInputDialog, ждём успешного
+//      ответа от сервера (имя записано в shooter:names), после чего шлём счёт.
+//   3. Если имя есть — сразу шлём счёт.
+//   4. Сервер возвращает {personalBest, isNewRecord}. Показываем «Счёт: X»
+//      + либо «Новый рекорд!», либо «Твой рекорд: Y».
 public class GameOverPanel : MonoBehaviour
 {
     [Header("UI")]
     public GameObject root;
     public Text titleText;
     public Text finalScoreText;
+    public Text recordText;
     public Button restartButton;
     public Button menuButton;
     public Button leaderboardButton;
 
-    [Header("Лидерборд")]
+    [Header("Диалог имени")]
     public NameInputDialog nameDialog;
+
+    int lastScore;
 
     void OnEnable()
     {
@@ -41,49 +49,64 @@ public class GameOverPanel : MonoBehaviour
 
     void OnGameOver(int finalScore)
     {
+        lastScore = finalScore;
         if (root != null) root.SetActive(true);
         if (titleText != null) titleText.text = "Время вышло";
-        if (finalScoreText != null) finalScoreText.text = $"Итог: {finalScore}";
+        if (finalScoreText != null) finalScoreText.text = $"Счёт: {finalScore}";
+        if (recordText != null) recordText.text = "...";
 
-        // 3. Лидерборд: если результат проходит в топ-5 — спросить имя
-        var diffId = GameSession.Instance != null
-                  && GameSession.Instance.Difficulty != null
-            ? GameSession.Instance.Difficulty.id
-            : string.Empty;
-
-        if (LeaderboardSaveSystem.QualifiesForTop(finalScore))
+        // 1. Первая игра — сначала имя, потом сабмит. Иначе сразу сабмит.
+        if (!PlayerIdentity.HasName())
         {
             if (nameDialog != null)
-            {
-                nameDialog.Open(name =>
-                    LeaderboardSaveSystem.Submit(name, finalScore, diffId));
-            }
+                nameDialog.OpenForFirstTime(_ => SubmitScore(finalScore));
             else
-            {
-                LeaderboardSaveSystem.Submit("Игрок", finalScore, diffId);
-            }
+                SubmitScore(finalScore);    // диалога нет — шлём без имени
         }
+        else
+        {
+            SubmitScore(finalScore);
+        }
+    }
+
+    void SubmitScore(int score)
+    {
+        if (LeaderboardClient.Instance == null)
+        {
+            if (recordText != null) recordText.text = "Сервер недоступен";
+            return;
+        }
+        LeaderboardClient.Instance.SaveScore(score, resp =>
+        {
+            if (recordText == null) return;
+            if (resp == null || !string.IsNullOrEmpty(resp.error))
+            {
+                // 2. Локализация частых ошибок
+                recordText.text = resp != null && resp.error == "rate_limited"
+                    ? "Сабмит уже учтён"
+                    : "Не удалось отправить счёт";
+                return;
+            }
+            recordText.text = resp.isNewRecord
+                ? $"Новый рекорд: {resp.personalBest}!"
+                : $"Твой рекорд: {resp.personalBest}";
+        });
     }
 
     void ToLeaderboard()
     {
-        // 4. Лидерборд опционален — переход только если сцена есть в BuildSettings
         if (Application.CanStreamedLevelBeLoaded("Leaderboard"))
             SceneManager.LoadScene("Leaderboard");
     }
 
     void Restart()
     {
-        // 1. Простой рестарт: загрузка той же сцены по индексу
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     void ToMenu()
     {
-        // 2. Возврат в меню (сцена MainMenu появится на Шаге 2)
         if (Application.CanStreamedLevelBeLoaded("MainMenu"))
-        {
             SceneManager.LoadScene("MainMenu");
-        }
     }
 }

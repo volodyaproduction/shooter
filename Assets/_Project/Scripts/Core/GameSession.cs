@@ -12,13 +12,8 @@ public class GameSession : MonoBehaviour
 {
     public static GameSession Instance { get; private set; }
 
-    [Header("Конфиг сложности")]
-    [Tooltip("Если задан — берётся из PlayerPrefs по ключу 'difficulty'")]
+    [Header("Конфиг раунда")]
     public DifficultyConfig difficulty;
-
-    [Header("Поиск конфигов сложности (для PlayerPrefs)")]
-    [Tooltip("Список всех сложностей; нужная выбирается по id")]
-    public DifficultyConfig[] availableDifficulties;
 
     [Header("Аудио")]
     public AudioSource sfxSource;
@@ -42,9 +37,6 @@ public class GameSession : MonoBehaviour
             return;
         }
         Instance = this;
-
-        // 2. Подменяем difficulty по PlayerPrefs, если выбрана сложность
-        ApplyChosenDifficulty();
     }
 
     void OnDestroy()
@@ -61,23 +53,6 @@ public class GameSession : MonoBehaviour
         ScoreChanged?.Invoke(Score);
         TimeChanged?.Invoke(TimeLeft);
         StartCoroutine(TimerLoop());
-    }
-
-    void ApplyChosenDifficulty()
-    {
-        // 4. Подбор конфига по сохранённому id (если есть)
-        if (availableDifficulties == null || availableDifficulties.Length == 0)
-            return;
-        var saved = PlayerPrefs.GetString("difficulty", string.Empty);
-        if (string.IsNullOrEmpty(saved)) return;
-        foreach (var cfg in availableDifficulties)
-        {
-            if (cfg != null && cfg.id == saved)
-            {
-                difficulty = cfg;
-                return;
-            }
-        }
     }
 
     public void AddScore(int amount, Vector2 worldPos = default)

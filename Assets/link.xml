@@ -1,0 +1,32 @@
+<!--
+    IL2CPP code stripping в WebGL по умолчанию агрессивный — выкидывает классы,
+    которые в сценах не используются как сериализованные объекты. Этот файл
+    говорит linker'у сохранить:
+
+    - DTO лидерборда (создаются только через JsonUtility.FromJson, иначе
+      получаем RuntimeError "null function" при парсинге ответа сервера);
+    - динамически добавляемые UI-компоненты в LeaderboardView (Horizontal/
+      VerticalLayoutGroup, LayoutElement, ContentSizeFitter), которые
+      создаются AddComponent в рантайме и в сериализованных префабах не
+      встречаются.
+-->
+<linker>
+  <assembly fullname="Assembly-CSharp">
+    <type fullname="LeaderboardClient" preserve="all"/>
+    <type fullname="LeaderboardClient/Entry" preserve="all"/>
+    <type fullname="LeaderboardClient/TopResponse" preserve="all"/>
+    <type fullname="LeaderboardClient/SaveScoreRequest" preserve="all"/>
+    <type fullname="LeaderboardClient/SaveScoreResponse" preserve="all"/>
+    <type fullname="LeaderboardClient/ChangeNameRequest" preserve="all"/>
+    <type fullname="LeaderboardClient/ChangeNameResponse" preserve="all"/>
+    <type fullname="TelegramLinkClick" preserve="all"/>
+  </assembly>
+  <assembly fullname="UnityEngine.UI">
+    <type fullname="UnityEngine.UI.HorizontalLayoutGroup" preserve="all"/>
+    <type fullname="UnityEngine.UI.VerticalLayoutGroup" preserve="all"/>
+    <type fullname="UnityEngine.UI.LayoutElement" preserve="all"/>
+    <type fullname="UnityEngine.UI.ContentSizeFitter" preserve="all"/>
+    <type fullname="UnityEngine.UI.Mask" preserve="all"/>
+    <type fullname="UnityEngine.UI.ScrollRect" preserve="all"/>
+  </assembly>
+</linker>

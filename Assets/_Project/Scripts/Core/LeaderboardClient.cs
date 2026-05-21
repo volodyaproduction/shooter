@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Scripting;
 
 // Сетевой клиент глобального лидерборда. Singleton + DontDestroyOnLoad —
 // чтобы переживал смены сцен MainMenu → Game → Leaderboard.
@@ -15,29 +16,32 @@ public class LeaderboardClient : MonoBehaviour
     public static LeaderboardClient Instance { get; private set; }
 
     // ===== DTO для JsonUtility =====
+    // [Preserve] критично для WebGL/IL2CPP: эти классы создаются только через
+    // JsonUtility.FromJson по рефлексии, и без атрибута linker их выкидывает —
+    // получаем RuntimeError "null function" при попытке распарсить ответ.
 
-    [Serializable]
+    [Preserve, Serializable]
     public class Entry
     {
         public string name;
         public int score;
     }
 
-    [Serializable]
+    [Preserve, Serializable]
     public class TopResponse
     {
         public List<Entry> entries;
         public string error;
     }
 
-    [Serializable]
+    [Preserve, Serializable]
     class SaveScoreRequest
     {
         public string player_id;
         public int score;
     }
 
-    [Serializable]
+    [Preserve, Serializable]
     public class SaveScoreResponse
     {
         public int personalBest;
@@ -45,14 +49,14 @@ public class LeaderboardClient : MonoBehaviour
         public string error;
     }
 
-    [Serializable]
+    [Preserve, Serializable]
     class ChangeNameRequest
     {
         public string player_id;
         public string name;
     }
 
-    [Serializable]
+    [Preserve, Serializable]
     public class ChangeNameResponse
     {
         public bool ok;

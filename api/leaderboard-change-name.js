@@ -45,21 +45,28 @@ export default async function handler(req, res) {
   const nameKey = name.toLowerCase();
 
   try {
-    // 3. Проверка уникальности через обратный индекс
-    const owner = await cmd(["HGET", KEY_NAME_INDEX, nameKey]);
-    if (owner && owner !== playerId) {
-      res.status(409).json({ error: "name_taken" });
-      return;
+    // 3. Атомарно «занять» имя через HSETNX. Без этого два одновременных
+    //    запроса с одним именем оба прошли бы проверку HGET и оба сделали
+    //    бы HSET — последний победил, у двух игроков оказалось бы общее имя.
+    const claimed = await cmd(
+        ["HSETNX", KEY_NAME_INDEX, nameKey, playerId]);
+    if (claimed === 0) {
+      // Слот уже занят. Если владелец — мы сами (повторная отправка, смена
+      // регистра), это не конфликт — продолжаем.
+      const owner = await cmd(["HGET", KEY_NAME_INDEX, nameKey]);
+      if (owner !== playerId) {
+        res.status(409).json({ error: "name_taken" });
+        return;
+      }
     }
 
-    // 4. Узнаём прежнее имя, чтобы освободить его в обратном индексе
+    // 4. Освобождаем прежний слот и записываем новое отображаемое имя
     const prevName = await cmd(["HGET", KEY_NAMES, playerId]);
     const ops = [];
     if (prevName && prevName.toLowerCase() !== nameKey) {
       ops.push(["HDEL", KEY_NAME_INDEX, prevName.toLowerCase()]);
     }
     ops.push(["HSET", KEY_NAMES, playerId, name]);
-    ops.push(["HSET", KEY_NAME_INDEX, nameKey, playerId]);
 
     await pipeline(ops);
     res.status(200).json({ ok: true });

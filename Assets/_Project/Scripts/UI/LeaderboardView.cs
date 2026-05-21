@@ -71,15 +71,19 @@ public class LeaderboardView : MonoBehaviour
 
     void RenderEntries(List<LeaderboardClient.Entry> entries)
     {
-        // 1. Подсвечиваем своё имя — берём из PlayerIdentity, сравниваем как
-        //    есть. На сервере оно case-sensitive, локально тоже.
+        // 1. Подсвечиваем свою строку — сравнение case-insensitive, потому
+        //    что уникальность имён на сервере проверяется по lowercase.
+        //    Если игрок сменил регистр через смену имени — подсветка не
+        //    теряется (например, было «Vova», стало «VOVA»).
         var myName = PlayerIdentity.GetName();
 
         for (int i = 0; i < entries.Count; i++)
         {
             var e = entries[i];
             CreateRow(rank: i + 1, name: e.name, score: e.score,
-                isMe: !string.IsNullOrEmpty(myName) && myName == e.name);
+                isMe: !string.IsNullOrEmpty(myName)
+                    && string.Equals(myName, e.name,
+                        System.StringComparison.OrdinalIgnoreCase));
         }
     }
 

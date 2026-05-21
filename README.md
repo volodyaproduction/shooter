@@ -179,7 +179,7 @@ Assets/_Project/
 │   ├── Game.unity                       ← игровой раунд
 │   └── Leaderboard.unity                ← список всех игроков
 ├── Configs/                             ← .asset, генерируются AssetForge
-│   ├── Difficulty_Easy/Normal/Hard.asset
+│   ├── Difficulty_Normal.asset            ← единственный пресет сложности
 │   └── NormalTarget.asset, TrapTarget.asset
 ├── Prefabs/Target.prefab                ← генерируется AssetForge
 └── VFX/HitEffect.prefab, MissEffect.prefab  ← генерируются AssetForge

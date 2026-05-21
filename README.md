@@ -194,6 +194,7 @@ shooter/
 - **Спавн через `Update`, не корутиной** — корутина в WebGL/IL2CPP может «умереть» после `WaitForSeconds`/`MissingReference` и оставить игру без новых мишеней.
 - **`Physics2DRaycaster.maxRayIntersections = 1`** — клик с `Target` не пробьётся в `Playfield` ниже по `z`.
 - **WebGL: Brotli + `Decompression Fallback = ON`** — Unity сам распаковывает в JS, билд работает на любом хостинге без правки заголовков (Vercel, Netlify, itch.io). Размен — лоадер на ~150 КБ тяжелее.
+- **Адаптивный canvas через пост-патч в `build.sh`** — Unity по дефолту прибивает canvas к фиксированным 960×600, что не помещается на ноутбуках с малой высотой экрана. После сборки `build.sh` правит `web/index.html` через `python3`: заменяет фиксированный размер на `fitCanvas()`, который держит пропорции 16:10 и занимает 95% свободного места в окне. На мобильных ветка не задевается — там canvas остаётся на весь viewport.
 - **Шрифт `DejaVuSans.ttf`** — встроенный `LegacyRuntime.ttf` не содержит кириллицы.
 
 ---

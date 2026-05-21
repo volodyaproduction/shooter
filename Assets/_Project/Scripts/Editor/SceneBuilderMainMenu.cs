@@ -99,7 +99,7 @@ public static class SceneBuilderMainMenu
             parent: mainPanel.transform,
             name: "NameButton",
             font: font,
-            label: "Указать никнейм",
+            label: "Мой никнейм",
             color: ColorNickname,
             anchoredPos: new Vector2(0, 0),
             size: new Vector2(680, 100));
@@ -222,13 +222,25 @@ public static class SceneBuilderMainMenu
             text: string.Empty);
         dialog.errorText.color = new Color(1f, 0.6f, 0.6f);
 
+        // Две кнопки в одном ряду: «Отмена» слева (нейтральный), OK справа
+        // (шалфей — действие). На «Отмена» в GameOverPanel счёт в лидерборд
+        // не отправляется.
+        dialog.cancelButton = UiHelpers.Button(
+            parent: box.transform,
+            name: "CancelButton",
+            font: font,
+            label: "Отмена",
+            color: new Color(0.7f, 0.7f, 0.7f),
+            anchoredPos: new Vector2(-200, -220),
+            size: new Vector2(360, 100));
+
         dialog.submitButton = UiHelpers.Button(
             parent: box.transform,
             name: "SubmitButton",
             font: font,
             label: "OK",
-            color: ColorStart,                       // OK = действие → шалфей
-            anchoredPos: new Vector2(0, -220),
+            color: ColorStart,
+            anchoredPos: new Vector2(200, -220),
             size: new Vector2(360, 100));
 
         EditorUtility.SetDirty(dialog);
